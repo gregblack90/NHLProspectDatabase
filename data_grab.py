@@ -6,6 +6,7 @@ from selenium.webdriver.chrome.options import Options
 from bs4 import BeautifulSoup
 import pandas as pd
 import time
+from datetime import datetime
 import mysql.connector as mysql
 import dbConfig as guiConfig
 from search_for_game_log import GameLogSearch, EditGameLogExport, InsertIntoDatabase
@@ -93,7 +94,7 @@ class SeasonScrape:
         self.tableWidget.setRowCount(0)
         # Start the thread
         self.progressBar.setValue(99.9)
-        self.progressBar.setFormat("Loading...Please Wait.")
+        self.progressBar.setFormat("Loading Player Data...Please Wait.")
         self.thread.start()
         self.worker.percent_changed.connect(self.progressBar.setValue)
         self.worker.progress_bar_str.connect(self.progressBar.setFormat)
@@ -155,7 +156,11 @@ class SeasonData(QObject):
             # find run time to get data
             end = time.time()
             search_time = end - start
-            print("Search time for " + prospect + " took " + str(search_time) + " seconds")
+            now = datetime.now()
+            now_format = now.strftime("%m/%d/%Y %H:%M:%S")
+            time_for_search = open(r'C:\NHLdb_pyqt\files\_season_search_time.txt', "a")
+            time_for_search.write("" + now_format + " - SeasonData - Search time for " + prospect + " took " + str(search_time) + " seconds\n")
+            time_for_search.close()
             # quit driver
             driver.quit()
             # trim data frame for only needed info
@@ -213,7 +218,7 @@ class PlayerSeasonData:
         self.thread.finished.connect(self.thread.deleteLater)
         # Start the thread
         self.progressBar.setValue(99.9)
-        self.progressBar.setFormat("Loading Player Data...Please Wait.")
+        self.progressBar.setFormat("Loading Game Log Data...Please Wait.")
         self.thread.start()
         self.worker.percent_changed.connect(self.progressBar.setValue)
         self.worker.progress_bar_str.connect(self.progressBar.setFormat)
@@ -245,13 +250,13 @@ class PlayerDataScrape(QObject):
             # call game log edit function
             edit_game_log = EditGameLogExport()
             #   function will depend on league/game_log bit
-            if game_log == 1:  # CollegeHockeyInc
+            if game_log == 1:  # NCAA (CollegeHockeyInc)
                 edit_game_log.colhockeyinc_game_logs(search_text)
 
             # call insert data into database
             insert_game_log = InsertIntoDatabase()
             #   function will depend on league/game_log bit
-            if game_log == 1:  # CollegeHockeyInc
+            if game_log == 1:  # NCAA (CollegeHockeyInc)
                 insert_game_log.colhockeyinc_insert_log(search_text)
 
             # clear list, reset league bit and go to next selection
