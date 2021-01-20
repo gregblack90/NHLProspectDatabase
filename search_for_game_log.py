@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import numpy
 import time
+from datetime import datetime
 import mysql.connector as mysql
 import dbConfig as guiConfig
 
@@ -36,17 +37,29 @@ class GameLogSearch:
             webpage = "https://collegehockeyinc.com/teams/boston-college/roster" + year + ".php"
             # set league bit
             league_bit = 1
+        elif search_text[2] == "Univ. of Notre Dame":
+            # get season
+            year = search_text[1][-2:]
+            webpage = "https://collegehockeyinc.com/teams/notre-dame/roster" + year + ".php"
+            # set league bit
+            league_bit = 1
+        elif search_text[2] == "Univ. of Minnesota":
+            # get season
+            year = search_text[1][-2:]
+            webpage = "https://collegehockeyinc.com/teams/minnesota/roster" + year + ".php"
+            # set league bit
+            league_bit = 1
         else:
             print("Search not yet available...DO IT TO IT LARS....I mean Greg")
             return
         options = Options()
-        # options.page_load_strategy = 'eager'
-        # options.add_argument('--headless')
-        # options.add_argument('--disable gpu')
+        options.page_load_strategy = 'eager'
+        options.add_argument('--headless')
+        options.add_argument('--disable gpu')
         driver = webdriver.Chrome(executable_path=r"C:\chromedriver.exe", options=options)
         driver.get(webpage)
         # go to stats page for player
-        if search_text[2] == "Boston College":
+        if league_bit == 1:  # NCAA
             # navigate to stats table
             link = driver.find_element_by_partial_link_text(search_text[0])
             link.click()
@@ -74,7 +87,11 @@ class GameLogSearch:
                 # find run time to get data
                 end = time.time()
                 search_time = end - start
-                print("Search time for " + search_text[0] + " took " + str(search_time) + " seconds")
+                now = datetime.now()
+                now_format = now.strftime("%m/%d/%Y %H:%M:%S")
+                time_for_search = open(r'C:\NHLdb_pyqt\files\_game_log_search_time.txt', "a")
+                time_for_search.write("" + now_format + " - GameLogData - Search time for " + search_text[0] + " took " + str(search_time) + " seconds\n")
+                time_for_search.close()
         # quit driver
         driver.quit()
         # return league_bit for edit function
@@ -110,8 +127,6 @@ class EditGameLogExport:
         # drop first row, last row
         df1.drop(0, inplace=True)
         df1.drop(df1.tail(1).index, inplace=True)
-        # fill N/As with zeros
-        df1.fillna(0, inplace=True)
         # re-order columns
         df1 = df1[['Date', 'Opponent', 'Result', 'G', 'A', 'Total', 'P', 'Min', 'SOG', '+/-', 'GW', 'PP G', 'PP A',
                    'PP Total', 'SH G', 'SH A', 'SH Total']]
@@ -123,6 +138,8 @@ class EditGameLogExport:
             df1[['G', 'A', 'Total']] = df1[['G', 'A', 'Total']].fillna('DNP')
         if df1['SOG'].isnull().values.any():
             df1[['SOG']] = df1[['SOG']].fillna('Exhibition')
+        # fill N/As with zeros
+        df1.fillna(0, inplace=True)
         # save data file
         df1.to_excel(r'C:\NHLdb_pyqt\data_frame_tests\game_logs\game_log_' + search_text[0] + ' ' + search_text[1] + '.xlsx')
 
@@ -138,52 +155,69 @@ class InsertIntoDatabase:
             r'C:\NHLdb_pyqt\data_frame_tests\game_logs\game_log_' + search_text[0] + ' ' + search_text[1] + '.xlsx')
         # insert table if it doesn't exist
         table_name = search_text[0].replace(" ", "")
-        print(table_name)
-        cursor.execute("CREATE TABLE IF NOT EXISTS " + table_name + " (Date VARCHAR(255) NOT NULL, "
+        cursor.execute("CREATE TABLE IF NOT EXISTS " + table_name + " (Date DATE NOT NULL, "
+                                                                    "Season TEXT NOT NULL, "
+                                                                    "Team TEXT NOT NULL, "
+                                                                    "League TEXT NOT NULL, "
                                                                     "Opponent TEXT NOT NULL, "
                                                                     "Result TEXT NOT NULL, "
                                                                     "Goals TEXT NOT NULL, "
                                                                     "Assists TEXT NOT NULL, "
                                                                     "Total TEXT NOT NULL, "
-                                                                    "Penalties TEXT NOT NULL, "
-                                                                    "PIM TEXT NOT NULL, "
+                                                                    "Penalties TINYINT NOT NULL, "
+                                                                    "PIM TINYINT NOT NULL, "
                                                                     "SOG TEXT NOT NULL, "
-                                                                    "PlusMinus TEXT NOT NULL, "
+                                                                    "PlusMinus TINYINT NOT NULL, "
                                                                     "GW TEXT NOT NULL, "
-                                                                    "PPG TEXT NOT NULL, "
-                                                                    "PPA TEXT NOT NULL, "
-                                                                    "PPTotal TEXT NOT NULL, "
-                                                                    "SHG TEXT NOT NULL, "
-                                                                    "SHA TEXT NOT NULL, "
-                                                                    "SHTotal TEXT NOT NULL, "
+                                                                    "PPG TINYINT NOT NULL, "
+                                                                    "PPA TINYINT NOT NULL, "
+                                                                    "PPTotal TINYINT NOT NULL, "
+                                                                    "SHG TINYINT NOT NULL, "
+                                                                    "SHA TINYINT NOT NULL, "
+                                                                    "SHTotal TINYINT NOT NULL, "
                                                                     "PRIMARY KEY (Date))")
-        # insert data row by row, check to make sure data (primary key) doesn't exists to avoid redundant data
+        # 1. check to make sure data (primary key) doesn't exists to avoid redundant data
+        # 2. insert data row by row
         list_of_rows = df1.to_numpy().tolist()
         for row in range(len(list_of_rows)):
-            # unpack data
+            # get date
             date = list_of_rows[row][1]
-            opp = list_of_rows[row][2]
-            result = list_of_rows[row][3]
-            goal = list_of_rows[row][4]
-            assist = list_of_rows[row][5]
-            ptotal = list_of_rows[row][6]
-            pen = list_of_rows[row][7]
-            pim = list_of_rows[row][8]
-            plusminus = list_of_rows[row][9]
-            sog = list_of_rows[row][10]
-            gw = list_of_rows[row][11]
-            ppg = list_of_rows[row][12]
-            ppa = list_of_rows[row][13]
-            pptot = list_of_rows[row][14]
-            shg = list_of_rows[row][15]
-            sha = list_of_rows[row][16]
-            sht = list_of_rows[row][17]
-            # insert row into database
-            sql = "INSERT INTO " + table_name + " (Date, Opponent, Result, Goals, Assists, Total, Penalties, PIM, " \
-                                                "SOG, PlusMinus, GW, PPG, PPA, PPTotal, SHG, SHA, SHTotal)" \
-                  "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-            val = (date, opp, result, goal, assist, ptotal, pen, pim, plusminus, sog, gw, ppg, ppa, pptot, shg, sha, sht)
-            cursor.execute(sql, val)
-            connection.commit()
+            check_date = datetime.strptime(date, '%m/%d/%Y').strftime('%Y-%m-%d')
+            #   check for repeat date
+            query = "SELECT Date FROM " + table_name + " WHERE Date = %s"
+            cursor.execute(query, (check_date,))
+            numb = cursor.fetchall()
+            count = len(numb)
+            if count > 0:
+                # date already exists, skip
+                continue
+            else:
+                # unpack rest of data
+                season = search_text[1]
+                team = search_text[2]
+                league = search_text[3]
+                opp = list_of_rows[row][2]
+                result = list_of_rows[row][3]
+                goal = list_of_rows[row][4]
+                assist = list_of_rows[row][5]
+                ptotal = list_of_rows[row][6]
+                pen = list_of_rows[row][7]
+                pim = list_of_rows[row][8]
+                plusminus = list_of_rows[row][9]
+                sog = list_of_rows[row][10]
+                gw = list_of_rows[row][11]
+                ppg = list_of_rows[row][12]
+                ppa = list_of_rows[row][13]
+                pptot = list_of_rows[row][14]
+                shg = list_of_rows[row][15]
+                sha = list_of_rows[row][16]
+                sht = list_of_rows[row][17]
+                # insert row into database
+                sql = "INSERT INTO " + table_name + " (Date, Season, Team, League, Opponent, Result, Goals, Assists, Total, Penalties, PIM, " \
+                                                    "SOG, PlusMinus, GW, PPG, PPA, PPTotal, SHG, SHA, SHTotal)" \
+                    "VALUES (STR_TO_DATE(%s, '%m/%d/%Y'), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                val = (date, season, team, league, opp, result, goal, assist, ptotal, pen, pim, plusminus, sog, gw, ppg, ppa, pptot, shg, sha, sht)
+                cursor.execute(sql, val)
+                connection.commit()
         # close database connection
         close_db_connection(connection)
