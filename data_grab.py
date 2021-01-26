@@ -9,7 +9,7 @@ import time
 from datetime import datetime
 import mysql.connector as mysql
 import dbConfig as guiConfig
-from search_for_game_log import GameLogSearch, EditGameLogExport, InsertIntoDatabase
+from game_log_functions import GameLogSearch, EditGameLogExport, InsertIntoDatabase
 
 
 # Open Database connection
@@ -159,7 +159,8 @@ class SeasonData(QObject):
             now = datetime.now()
             now_format = now.strftime("%m/%d/%Y %H:%M:%S")
             time_for_search = open(r'C:\NHLdb_pyqt\files\_season_search_time.txt', "a")
-            time_for_search.write("" + now_format + " - SeasonData - Search time for " + prospect + " took " + str(search_time) + " seconds\n")
+            time_for_search.write("" + now_format + " - SeasonData - Search time for " + prospect +
+                                  " took " + str(search_time) + " seconds\n")
             time_for_search.close()
             # quit driver
             driver.quit()
@@ -240,24 +241,28 @@ class PlayerDataScrape(QObject):
             # assemble search text list
             search_text.append(prospect[3:])
             search_text.append(year[i])
-            search_text.append(team[i])
+            # add condition for USNTDP in USHL
+            if team[i] == "USNTDP Juniors":
+                search_text.append("Team USA")
+            else:
+                search_text.append(team[i])
             search_text.append(league[i])
 
             # call search function
             call_game_log = GameLogSearch()
-            game_log = call_game_log.game_log_search(search_text)
+            league_bit = call_game_log.game_log_search(search_text)
 
             # call game log edit function
             edit_game_log = EditGameLogExport()
             #   function will depend on league/game_log bit
-            if game_log == 1:  # NCAA (CollegeHockeyInc)
+            if league_bit == 1:  # NCAA (CollegeHockeyInc)
                 edit_game_log.colhockeyinc_game_logs(search_text)
+            if league_bit == 2:  # USHL
+                edit_game_log.ushl_game_log(search_text)
 
             # call insert data into database
             insert_game_log = InsertIntoDatabase()
-            #   function will depend on league/game_log bit
-            if game_log == 1:  # NCAA (CollegeHockeyInc)
-                insert_game_log.colhockeyinc_insert_log(search_text)
+            insert_game_log.insert_log(search_text, league_bit)
 
             # clear list, reset league bit and go to next selection
             search_text = []
