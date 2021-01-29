@@ -231,8 +231,12 @@ class EditGameLogExport:
         df1['SH Total'] = 'x'
         df1 = df1[['Date', 'Opponent', 'Result', 'G', 'A', 'Total', 'P', 'Min', 'SOG', '+/-', 'GW', 'PP G', 'PP A',
                    'PP Total', 'SH G', 'SH A', 'SH Total']]
-        # convert NAN's to None
-        # df1 = df1.where((pd.notnull(df1)), None)
+        # If len(search_text) == 6, player played for more than one team in the same league in the same league
+        if len(search_text) == 6:
+            start = int(search_text[5])
+            amt = int(search_text[4])
+            keep_rows = range((start - 1), (start + amt))
+            df1 = df1[df1.index.isin(keep_rows)]
         # save data file
         df1.to_excel(
             r'C:\NHLdb_pyqt\data_frame_tests\game_logs\game_log_' + search_text[0] + '_' + search_text[1] + '_'
@@ -242,12 +246,6 @@ class EditGameLogExport:
 class InsertIntoDatabase:
     @staticmethod
     def insert_log(search_text, league_bit):
-        #  TODO: USHL game logs DO NOT seperate game logs if player plays for more than one team in a season
-        #   ...figure out how to distinguish.
-        #   IDEA -
-        #   --> Maybe set a range for the GP from the season search and only loop through that range in the
-        #       dataframe while inserting into database
-        print(search_text)
         # connect to database, return connection/cursor
         db_conn = db_connection()
         connection = db_conn[0]
@@ -297,7 +295,6 @@ class InsertIntoDatabase:
             count = len(numb)
             if count > 0:
                 # date already exists, skip
-                print('repeat found')
                 continue
             else:
                 # unpack rest of data
