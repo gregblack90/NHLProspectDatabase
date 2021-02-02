@@ -78,6 +78,9 @@ class GameLogSearch:
             # set league bit
             league_bit = 2
             webpage = "https://www.ushl.com/view#/roster/11/73"
+        elif search_text[3] == "QMJHL":
+            league_bit = 3
+            webpage = "https://theqmjhl.ca/stats/players/196"
         else:
             print("Team search not yet available...DO IT TO IT LARS....I mean Greg")
             return
@@ -88,6 +91,7 @@ class GameLogSearch:
         # function used for data frame
         def row_get_data_text(table_row, col_tag='td'):  # td (data) or th (header)
             return [td.get_text(strip=True) for td in table_row.find_all(col_tag)]
+
         # go to stats page for player
         if league_bit == 1:  # NCAA
             # navigate to stats table
@@ -114,12 +118,16 @@ class GameLogSearch:
                 data_table_df = pd.DataFrame(data)
                 data_table_df.to_excel(r'C:\NHLdb_pyqt\data_frame_tests\game_logs\game_log_' + search_text[0] + '_'
                                        + search_text[1] + '_' + search_text[2] + '_' + search_text[3] + '.xlsx')
-        if league_bit == 2:
+        if league_bit == 2:  # USHL
             # select year and team from user selection, click SUBMIT button
             time.sleep(2)
-            WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//select[@class='ng-pristine ng-untouched ng-valid ng-not-empty' and @ng-model='selectedSeason']//option[@label='" + search_text[1] + "']"))).click()
+            WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH,
+                                                                        "//select[@class='ng-pristine ng-untouched ng-valid ng-not-empty' and @ng-model='selectedSeason']//option[@label='" +
+                                                                        search_text[1] + "']"))).click()
             time.sleep(2)
-            WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//select[@class='ng-pristine ng-untouched ng-valid ng-not-empty' and @ng-model='selectedTeamNoAll']//option[@label='" + search_text[2] + "']"))).click()
+            WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH,
+                                                                        "//select[@class='ng-pristine ng-untouched ng-valid ng-not-empty' and @ng-model='selectedTeamNoAll']//option[@label='" +
+                                                                        search_text[2] + "']"))).click()
             driver.find_element_by_partial_link_text("SUBMIT").click()
             # select player
             WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.LINK_TEXT,
@@ -154,9 +162,57 @@ class GameLogSearch:
                         data_table_df.to_excel(r'C:\NHLdb_pyqt\data_frame_tests\game_logs\game_log_' + search_text[0]
                                                + '_' + search_text[1] + '_' + search_text[2] + '_'
                                                + search_text[3] + '.xlsx')
+        if league_bit == 3:  # QMJHL
+            # select season
+            select = Select(driver.find_element_by_class_name('filter-group__dropdown-select'))
+            select.select_by_visible_text(search_text[1] + " | Regular Season")
+            # need to split name and rearrange to "Last, First" because of webpage
+            split_name = search_text[0].split(" ")
+            click_name = split_name[1] + ", " + split_name[0]
+            # click player name
+            driver.find_element_by_partial_link_text(click_name).click()
+            # once on player page, click "Game by Game" tab
+            # time.sleep(1)
+            driver.find_element_by_class_name("sgamebygame").click()
+            # have to select season again...
+            select_again = Select(driver.find_element_by_id('season_id2'))
+            time.sleep(2)
+            select_again.select_by_visible_text(search_text[1] + " | Regular Season")
+            # find stats table
+            time.sleep(2)
+            table = "controlBar"
+            data = []
+            soup = BeautifulSoup(driver.page_source, "html.parser")
+            stats_table = soup.find("table", {"id": table})
+            if stats_table is None:
+                # if table not found, try again
+                soup = BeautifulSoup(driver.page_source, "html.parser")
+                stats_table = soup.find("table", {"class": table})
+            if stats_table is not None:
+                # table found, start getting data
+                trs = stats_table.find_all('tr')
+                header_row = row_get_data_text(trs[0], 'th')
+                if header_row:  # if there is a header row include first
+                    data.append(header_row)
+                    trs = trs[1:]
+                for tr in trs:  # for every table row
+                    data.append(row_get_data_text(tr, 'td'))  # data row
+                # make data frame, save to .csv
+                data_table_df = pd.DataFrame(data)
+                data_table_df.to_excel(r'C:\NHLdb_pyqt\data_frame_tests\game_logs\game_log_' + search_text[0] + '_'
+                                       + search_text[1] + '_' + search_text[2] + '_' + search_text[3] + '.xlsx')
 
 
 class EditGameLogExport:
+    @staticmethod
+    def mult_teams_same_league_same_year(search_text, df1):
+        df1.reset_index(drop=True, inplace=True)
+        start = int(search_text[5])
+        amt = int(search_text[4])
+        keep_rows = range(start, (start + amt))
+        df1 = df1[df1.index.isin(keep_rows)]
+        return df1
+
     @staticmethod
     def colhockeyinc_game_logs(search_text):
         # open file
@@ -233,11 +289,50 @@ class EditGameLogExport:
                    'PP Total', 'SH G', 'SH A', 'SH Total']]
         # If len(search_text) == 6, player played for more than one team in the same league in the same league
         if len(search_text) == 6:
-            start = int(search_text[5])
-            amt = int(search_text[4])
-            keep_rows = range((start - 1), (start + amt))
-            df1 = df1[df1.index.isin(keep_rows)]
+            df1 = EditGameLogExport.mult_teams_same_league_same_year(search_text, df1)
         # save data file
+        df1.to_excel(
+            r'C:\NHLdb_pyqt\data_frame_tests\game_logs\game_log_' + search_text[0] + '_' + search_text[1] + '_'
+            + search_text[2] + '_' + search_text[3] + '.xlsx')
+
+    @staticmethod
+    def qmjhl_game_log(search_text):
+        # open file
+        df1 = pd.read_excel(
+            r'C:\NHLdb_pyqt\data_frame_tests\game_logs\game_log_' + search_text[0] + '_' + search_text[1] + '_'
+            + search_text[2] + '_' + search_text[3] + '.xlsx')
+        # rename columns
+        df1.columns = ['', 'Opponent', 'Date', 'G', 'A', 'Total', 'Min', '+/-', 'PP G', 'SH G', 'GW', 'TG', 'SOG',
+                       'SH%', 'FO', 'WF%', 'SoG', 'SoGW', 'SSH', 'SSH%']
+        # drop first two rows
+        df1.drop([0, 1], inplace=True)
+        # drop unneeded columns
+        df1.drop('SoG', axis=1, inplace=True)
+        df1.drop('SoGW', axis=1, inplace=True)
+        df1.drop('SSH', axis=1, inplace=True)
+        df1.drop('SSH%', axis=1, inplace=True)
+        df1.drop('TG', axis=1, inplace=True)
+        df1.drop('SH%', axis=1, inplace=True)
+        df1.drop('FO', axis=1, inplace=True)
+        df1.drop('WF%', axis=1, inplace=True)
+        # get rid of "Totals" rows
+        df1 = df1[~df1.Opponent.str.contains("Totals")]
+        # replace "-" with '0'
+        df1 = df1.replace({'-': '0'})
+        # add needed columns for database consistency
+        df1['Result'] = 'x'
+        df1['P'] = 'x'
+        df1['PP A'] = 'x'
+        df1['PP Total'] = 'x'
+        df1['SH A'] = 'x'
+        df1['SH Total'] = 'x'
+        # reorder columns
+        df1 = df1[['Date', 'Opponent', 'Result', 'G', 'A', 'Total', 'P', 'Min', 'SOG', '+/-', 'GW', 'PP G', 'PP A',
+                   'PP Total', 'SH G', 'SH A', 'SH Total']]
+        # If len(search_text) == 6, player played for more than one team in the same league in the same league
+        if len(search_text) == 6:
+            df1 = EditGameLogExport.mult_teams_same_league_same_year(search_text, df1)
+        # save edited file
         df1.to_excel(
             r'C:\NHLdb_pyqt\data_frame_tests\game_logs\game_log_' + search_text[0] + '_' + search_text[1] + '_'
             + search_text[2] + '_' + search_text[3] + '.xlsx')
@@ -286,7 +381,7 @@ class InsertIntoDatabase:
             check_date = ''
             if league_bit == 1:
                 check_date = datetime.strptime(date, '%m/%d/%Y').strftime('%Y-%m-%d')
-            if league_bit == 2:
+            if league_bit == 2 or league_bit == 3:
                 check_date = datetime.strptime(date, '%Y-%m-%d').strftime('%Y-%m-%d')
             #   check for repeat date
             query = "SELECT Date FROM " + table_name + " WHERE Date = %s"
@@ -326,7 +421,7 @@ class InsertIntoDatabase:
                                                         "PPA, PPTotal, SHG, SHA, SHTotal)" \
                                                         "VALUES (STR_TO_DATE(%s, '%m/%d/%Y'), %s, %s, %s, %s, %s, " \
                                                         "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-                if league_bit == 2:
+                if league_bit == 2 or league_bit == 3:
                     sql = "INSERT INTO " + table_name + "(Date, Season, Team, League, Opponent, Result, Goals, " \
                                                         "Assists, Total, Penalties, PIM, SOG, PlusMinus, GW, PPG, " \
                                                         "PPA, PPTotal, SHG, SHA, SHTotal)" \

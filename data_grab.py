@@ -240,7 +240,7 @@ class PlayerDataScrape(QObject):
     progress_bar_str = pyqtSignal(str)
 
     def player_data_scrape(self, prospect, year, team, league, gp):
-        search_text = []
+    # CREATE LIST OF PLAYER DETAILS FOR GAME LOG SEARCH LOOP
         search_text_total = []
         # check for repeat years
         repeat_year = []
@@ -278,6 +278,8 @@ class PlayerDataScrape(QObject):
                 search_text.append(0)
             search_text_total.append(search_text)
 
+
+    # ACCOMMODATING FOR DIFFERENT TEAM/SAME LEAGUE/SAME YEAR
         # get length of repeated years list
         search_text_total.append("buffer")
         num_rep_years = len(repeat_year)
@@ -294,9 +296,9 @@ class PlayerDataScrape(QObject):
                         and search_text_total[count][1] == search_text_total[count + 1][1] \
                         and search_text_total[count][3] == search_text_total[count + 1][3]:
                     if counter == 0:  # first occurrence, append beginning range of 0 to end of list
-                        search_text_total[count].append("1")
+                        search_text_total[count].append("0")
                     else:  # any other occurrence, go to previous search text and append the number of GP + 1 to current list
-                        beg_of_gm_rg = int(search_text_total[count - 1][4]) + 1
+                        beg_of_gm_rg = int(search_text_total[count - 1][4])
                         search_text_total[count].append(str(beg_of_gm_rg))
                     counter = counter + 1
                 # if there is a repeat year found
@@ -311,13 +313,16 @@ class PlayerDataScrape(QObject):
                     gm_rg = 0
                     for item in range(counter):
                         gm_rg = gm_rg + int(search_text_total[count - (item + 1)][4])
-                    gm_rg = gm_rg + 1
                     search_text_total[count].append(str(gm_rg))
             num_of_years = num_of_years + 1
+        # delete buffer
         del search_text_total[-1]
 
+
+    # SEARCH FOR GAME LOG/EDIT GAME LOG/INSERT GAME LOG
         # getting data loop
         for search_data in search_text_total:
+            print(search_data)
             # call search function
             call_game_log = GameLogSearch()
             league_bit = call_game_log.game_log_search(search_data)
@@ -329,13 +334,13 @@ class PlayerDataScrape(QObject):
                 edit_game_log.colhockeyinc_game_logs(search_data)
             if league_bit == 2:  # USHL
                 edit_game_log.ushl_game_log(search_data)
+            if league_bit == 3:  # QMJHL
+                edit_game_log.qmjhl_game_log(search_data)
 
             # call insert data into database
             insert_game_log = InsertIntoDatabase()
             insert_game_log.insert_log(search_data, league_bit)
 
-            # clear list, reset league bit and go to next selection
-            search_text = []
         # Finished
         self.finished.emit()
         # reset progress bar formatting
