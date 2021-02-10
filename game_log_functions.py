@@ -29,10 +29,12 @@ class GameLogSearch:
     def game_log_search(search_text):
         # Start
         start = time.time()
+
         # call function for league bit and webpage
         search_info = GameLogSearch.set_league_bit_get_webpage(search_text)
         league_bit = search_info[0]
         webpage = search_info[1]
+
         # common web scrape items
         options = Options()
         options.page_load_strategy = 'eager'
@@ -40,8 +42,10 @@ class GameLogSearch:
         # options.add_argument('--disable gpu')
         driver = webdriver.Chrome(executable_path=r"C:\chromedriver.exe", options=options)
         driver.get(webpage)
+
         # call function to get game log table
         GameLogSearch.get_game_log_table(league_bit, search_text, driver)
+
         # find run time to get data
         end = time.time()
         search_time = end - start
@@ -49,7 +53,7 @@ class GameLogSearch:
         now_format = now.strftime("%m/%d/%Y %H:%M:%S")
         # write to log file
         time_for_search = open(r'C:\NHLdb_pyqt\files\_game_log_search_time.txt', "a")
-        time_for_search.write("" + now_format + " - GameLogData - Search time for " + search_text[0] + " took " +
+        time_for_search.write("" + now_format + " - GameLogData - " + search_text[3] + " - Search time for " + search_text[0] + " took " +
                               str(search_time) + " seconds\n")
         time_for_search.close()
         # quit driver
@@ -81,6 +85,9 @@ class GameLogSearch:
         elif search_text[3] == "QMJHL":
             league_bit = 3
             webpage = "https://theqmjhl.ca/stats/players/196"
+        elif search_text[3] == "OHL":
+            league_bit = 4
+            webpage = ""
         else:
             print("Team search not yet available...DO IT TO IT LARS....I mean Greg")
             return
@@ -163,16 +170,23 @@ class GameLogSearch:
                                                + '_' + search_text[1] + '_' + search_text[2] + '_'
                                                + search_text[3] + '.xlsx')
         if league_bit == 3:  # QMJHL
-            # select season
-            select = Select(driver.find_element_by_class_name('filter-group__dropdown-select'))
-            select.select_by_visible_text(search_text[1] + " | Regular Season")
+            # split team name and add comma to middle
+            split_team = search_text[2].split(" ")
+            select_team = split_team[0] + ", " + split_team[1]
             # need to split name and rearrange to "Last, First" because of webpage
             split_name = search_text[0].split(" ")
             click_name = split_name[1] + ", " + split_name[0]
+            # select season
+            dropdown_season = Select(driver.find_element_by_xpath("//select[@data-reactid='.0.0.3.0.0.0']"))
+            dropdown_season.select_by_visible_text(search_text[1] + " | Regular Season")
+            # select team
+            dropdown_team = Select(driver.find_element_by_xpath("//select[@data-reactid='.0.0.3.2.0.0']"))
+            dropdown_team.select_by_visible_text(select_team)
+            # wait a second for it to load
+            time.sleep(1)
             # click player name
             driver.find_element_by_partial_link_text(click_name).click()
             # once on player page, click "Game by Game" tab
-            # time.sleep(1)
             driver.find_element_by_class_name("sgamebygame").click()
             # have to select season again...
             select_again = Select(driver.find_element_by_id('season_id2'))
