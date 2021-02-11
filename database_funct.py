@@ -2,6 +2,7 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import pyqtSignal, QThread, QObject
 import mysql.connector as mysql
 import dbConfig as guiConfig
+from datetime import date
 
 
 # Open Database connection
@@ -92,12 +93,18 @@ class DBFunctions:
             self.view_database_table.setHorizontalHeaderLabels(header_labels)
         # enter data.  For each row...
         for row in range(len(data)):
+            print(data[row])
             # get number of total rows...
             row_position = self.view_database_table.rowCount()
             # insert new row...
             self.view_database_table.insertRow(row_position)
+            # for loop range will change with prospects table due to age being calculated and not in database
+            if table_name == "prospects":
+                range_len = len(data[row_position]) + 1
+            else:
+                range_len = len(data[row_position])
             # for each column in new row, insert data into columns
-            for col in range(len(data[row_position])):
+            for col in range(range_len):
                 if col == 0:
                     self.view_database_table.setItem(row_position, col,
                                                      QtWidgets.QTableWidgetItem(str(data[row_position][col])))
@@ -117,11 +124,26 @@ class DBFunctions:
                     self.view_database_table.setItem(row_position, col,
                                                      QtWidgets.QTableWidgetItem(data[row_position][col]))
                 if col == 6:
-                    self.view_database_table.setItem(row_position, col,
-                                                     QtWidgets.QTableWidgetItem(data[row_position][col]))
+                    # for the prospects table, calculate age
+                    if table_name == "prospects":
+                        dob = data[row_position][col-1]
+                        b_mon = int(dob[0:2])
+                        b_day = int(dob[3:5])
+                        b_year = int(dob[6:10])
+                        today = date.today()
+                        age = today.year - b_year - ((today.month, today.day) < (b_mon, b_day))
+                        self.view_database_table.setItem(row_position, col, QtWidgets.QTableWidgetItem(str(age)))
+                    else:
+                        self.view_database_table.setItem(row_position, col,
+                                                         QtWidgets.QTableWidgetItem(data[row_position][col]))
                 if col == 7:
-                    self.view_database_table.setItem(row_position, col,
-                                                     QtWidgets.QTableWidgetItem(data[row_position][col]))
+                    # because age is calculated, index for birthplace needs to be subtracted from current column #
+                    if table_name == "prospects":
+                        self.view_database_table.setItem(row_position, col,
+                                                         QtWidgets.QTableWidgetItem(data[row_position][col-1]))
+                    else:
+                        self.view_database_table.setItem(row_position, col,
+                                                         QtWidgets.QTableWidgetItem(data[row_position][col]))
                 if col == 8:
                     self.view_database_table.setItem(row_position, col,
                                                      QtWidgets.QTableWidgetItem(data[row_position][col]))
@@ -236,4 +258,7 @@ class DBFunctions:
             table_error = show_error(bit)
             if table_error > 0:  # quit function if you get here
                 return
+
+    def delete_entry(self):
+        print('placeholder')
 
