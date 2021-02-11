@@ -41,6 +41,24 @@ class UiDBsetup:
 
 
 class DBFunctions:
+    # function for error message if user tries to edit a table that is not prospects or teams
+    def show_error(error_bit):
+        def close_error_msg():
+            error_msg.close()
+            return
+        error_msg = QtWidgets.QMessageBox()
+        error_msg.setIcon(QtWidgets.QMessageBox.Warning)
+        if error_bit == 1:
+            error_msg.setText("Please select a row")
+        elif error_bit == 2:
+            error_msg.setText("Cannot edit tables other than 'prospects' or 'teams'")
+        elif error_bit == 3:
+            error_msg.setText("Can only delete entries from prospects table")
+        error_msg.setWindowTitle("ERROR")
+        error_msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
+        error_msg.buttonClicked.connect(close_error_msg)
+        return error_msg.exec_()
+
     def load_table(self):
         # Get select table name
         table_name = self.select_table_list.currentText()
@@ -93,7 +111,6 @@ class DBFunctions:
             self.view_database_table.setHorizontalHeaderLabels(header_labels)
         # enter data.  For each row...
         for row in range(len(data)):
-            print(data[row])
             # get number of total rows...
             row_position = self.view_database_table.rowCount()
             # insert new row...
@@ -188,23 +205,6 @@ class DBFunctions:
     def update_entry(self):
         # Get select table name
         table_name = self.select_table_list.currentText()
-
-        # function for error message if user tries to edit a table that is not prospects or teams
-        def show_error(error_bit):
-            def close_error_msg():
-                error_msg.close()
-                return
-            error_msg = QtWidgets.QMessageBox()
-            error_msg.setIcon(QtWidgets.QMessageBox.Warning)
-            if error_bit == 1:
-                error_msg.setText("Please select a row")
-            elif error_bit == 2:
-                error_msg.setText("Cannot edit tables other than 'prospects' or 'teams'")
-            error_msg.setWindowTitle("ERROR")
-            error_msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
-            error_msg.buttonClicked.connect(close_error_msg)
-            return error_msg.exec_()
-
         # if table is prospects or teams, go ahead and edit
         if table_name == "prospects" or table_name == "teams":
             # get select rows' contents
@@ -219,7 +219,7 @@ class DBFunctions:
             # if there is nothing in data, row was not selected, show error message
             if len(data) == 0:
                 bit = 1
-                table_error = show_error(bit)
+                table_error = DBFunctions.show_error(bit)
                 if table_error > 0:  # quit function if you get here
                     return
             # connect to database
@@ -251,14 +251,49 @@ class DBFunctions:
                 cursor.execute(sql, val)
                 connection.commit()
                 close_db_connection(connection)
-
         # if table is anything other than prospects or teams, don't allow edit
         else:
             bit = 2
-            table_error = show_error(bit)
+            table_error = DBFunctions.show_error(bit)
             if table_error > 0:  # quit function if you get here
                 return
 
     def delete_entry(self):
-        print('placeholder')
-
+        # get table name
+        table_name = self.select_table_list.currentText()
+        # if table is prospects go ahead and edit
+        if table_name == "prospects":
+            # get select rows' contents
+            data = []
+            for index in self.view_database_table.selectionModel().selectedRows():
+                row = index.row()
+                for column in range(8):  # Can only edit prospects tables which has 8 columns
+                    if self.view_database_table.item(row, column) is None:
+                        # This will skip empty columns if nothing selected
+                        continue
+                    else:
+                        data.append(self.view_database_table.item(row, column).text())
+            # if there is nothing in data, row was not selected, show error message
+            if len(data) == 0:
+                bit = 1
+                table_error = DBFunctions.show_error(bit)
+                if table_error > 0:  # quit function if you get here
+                    return
+            # connect to database
+            db_conn = db_connection()
+            connection = db_conn[0]
+            cursor = db_conn[1]
+            # delete selected row
+            delete_key = data[0]
+            print(delete_key)
+            sql = "DELETE FROM prospects WHERE Name=%s"
+            val = (delete_key,)
+            cursor.execute(sql, val)
+            connection.commit()
+            close_db_connection(connection)
+        # if table is anything other than prospects or teams, don't allow edit
+        else:
+            bit = 3
+            table_error = DBFunctions.show_error(bit)
+            if table_error > 0:  # quit function if you get here
+                return

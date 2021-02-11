@@ -31,8 +31,10 @@ class Main(QMainWindow, Ui_MainWindow):
         UiDBsetup.pop_table_list(self)
         # Load table data
         self.load_table_button.clicked.connect(lambda: DBFunctions.load_table(self))
-        # Edit table entry
+        # Edit table entry (only from teams/prospects table)
         self.update_entry_button.clicked.connect(lambda: DBFunctions.update_entry(self))
+        # Delete entry (only from prospects table)
+        self.delete_entry_button.clicked.connect(lambda: DBFunctions.delete_entry(self))
 
     # Add Season data to table once scrape is complete [Called from SeasonScrape, call_scrape_thread]
     @QtCore.pyqtSlot(list)
