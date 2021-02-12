@@ -323,7 +323,7 @@ class PlayerDataScrape(QObject):
         # getting data loop
         for search_data in search_text_total:
             print(search_data)
-            # call search function
+            # call search function (get game log data)
             call_game_log = GameLogSearch()
             league_bit = call_game_log.game_log_search(search_data)
 
@@ -336,8 +336,10 @@ class PlayerDataScrape(QObject):
                 edit_game_log.ushl_game_log(search_data)
             if league_bit == 3:  # QMJHL
                 edit_game_log.qmjhl_game_log(search_data)
+            if league_bit == 4:  # OHL
+                edit_game_log.ohl_game_log(search_data)
 
-            # call insert data into database
+            # call insert data into database function
             insert_game_log = InsertIntoDatabase()
             insert_game_log.insert_log(search_data, league_bit)
 

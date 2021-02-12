@@ -87,7 +87,7 @@ class GameLogSearch:
             webpage = "https://theqmjhl.ca/stats/players/196"
         elif search_text[3] == "OHL":
             league_bit = 4
-            webpage = ""
+            webpage = "https://ontariohockeyleague.com/stats/players/68"
         else:
             print("Team search not yet available...DO IT TO IT LARS....I mean Greg")
             return
@@ -195,6 +195,49 @@ class GameLogSearch:
             # find stats table
             time.sleep(2)
             table = "controlBar"
+            data = []
+            soup = BeautifulSoup(driver.page_source, "html.parser")
+            stats_table = soup.find("table", {"id": table})
+            if stats_table is None:
+                # if table not found, try again
+                soup = BeautifulSoup(driver.page_source, "html.parser")
+                stats_table = soup.find("table", {"class": table})
+            if stats_table is not None:
+                # table found, start getting data
+                trs = stats_table.find_all('tr')
+                header_row = row_get_data_text(trs[0], 'th')
+                if header_row:  # if there is a header row include first
+                    data.append(header_row)
+                    trs = trs[1:]
+                for tr in trs:  # for every table row
+                    data.append(row_get_data_text(tr, 'td'))  # data row
+                # make data frame, save to .csv
+                data_table_df = pd.DataFrame(data)
+                data_table_df.to_excel(r'C:\NHLdb_pyqt\data_frame_tests\game_logs\game_log_' + search_text[0] + '_'
+                                       + search_text[1] + '_' + search_text[2] + '_' + search_text[3] + '.xlsx')
+        if league_bit == 4:  # OHL
+            # need to split name and rearrange to "Last, First" because of webpage
+            split_name = search_text[0].split(" ")
+            click_name = split_name[1] + ", " + split_name[0]
+            # select season
+            dropdown_season = Select(driver.find_element_by_xpath("//select[@data-reactid='.0.0.3.0.0.0']"))
+            dropdown_season.select_by_visible_text(search_text[1] + " Regular Season")
+            # select team
+            dropdown_team = Select(driver.find_element_by_xpath("//select[@data-reactid='.0.0.3.2.0.0']"))
+            dropdown_team.select_by_visible_text(search_text[2])
+            # wait a second for it to load
+            time.sleep(1)
+            # click player name
+            driver.find_element_by_partial_link_text(click_name).click()
+            # once on player page, select game by game button
+            driver.find_element_by_xpath("//a[@data-reactid='.0.0.0.2.0.$game_by_game-tab.$game_by_game-link']").click()
+            # have to select season again...
+            select_again = Select(driver.find_element_by_xpath("//select[@data-reactid='.0.0.0.3.0.1.0.0.0']"))
+            time.sleep(2)
+            select_again.select_by_visible_text(search_text[1] + " Regular Season")
+            # find stats table
+            time.sleep(2)
+            table = "stats-data-table table"
             data = []
             soup = BeautifulSoup(driver.page_source, "html.parser")
             stats_table = soup.find("table", {"id": table})
@@ -351,6 +394,45 @@ class EditGameLogExport:
             r'C:\NHLdb_pyqt\data_frame_tests\game_logs\game_log_' + search_text[0] + '_' + search_text[1] + '_'
             + search_text[2] + '_' + search_text[3] + '.xlsx')
 
+    @staticmethod
+    def ohl_game_log(search_text):
+        # open file
+        df1 = pd.read_excel(r'C:\NHLdb_pyqt\data_frame_tests\game_logs\game_log_' + search_text[0] + '_'
+                            + search_text[1] + '_' + search_text[2] + '_' + search_text[3] + '.xlsx')
+        # rename column headers
+        df1.columns = ['', 'Opponent', 'Date', 'G', 'A', 'Total', '+/-', 'Min', 'FOW', 'SOG']
+        # drop first two rows
+        df1.drop([0, 1], inplace=True)
+        # drop FOW column
+        df1.drop('FOW', axis=1, inplace=True)
+        # reset row index numbers
+        df1.reset_index(drop=True, inplace=True)
+        # fill any NaN values with zeros
+        df1.fillna(0, inplace=True)
+        # convert PIM column to float then int to get rid of trailing zeros
+        df1.Min = df1.Min.astype(float)
+        df1.Min = df1.Min.astype(int)
+        # add a bunch of columns
+        df1['Result'] = 'x'
+        df1['P'] = 'x'
+        df1['PP A'] = 'x'
+        df1['PP Total'] = 'x'
+        df1['SH A'] = 'x'
+        df1['SH Total'] = 'x'
+        df1['GW'] = 'x'
+        df1['PP G'] = 'x'
+        df1['PP A'] = 'x'
+        df1['SH G'] = 'x'
+        # re-order columns
+        df1 = df1[['Date', 'Opponent', 'Result', 'G', 'A', 'Total', 'P', 'Min', 'SOG', '+/-', 'GW', 'PP G', 'PP A',
+                   'PP Total', 'SH G', 'SH A', 'SH Total']]
+        # If len(search_text) == 6, player played for more than one team in the same league in the same league
+        if len(search_text) == 6:
+            df1 = EditGameLogExport.mult_teams_same_league_same_year(search_text, df1)
+        # save edited file
+        df1.to_excel(r'C:\NHLdb_pyqt\data_frame_tests\game_logs\game_log_' + search_text[0] + '_' + search_text[1] + '_'
+                     + search_text[2] + '_' + search_text[3] + '.xlsx')
+
 
 class InsertIntoDatabase:
     @staticmethod
@@ -365,7 +447,8 @@ class InsertIntoDatabase:
             + search_text[2] + '_' + search_text[3] + '.xlsx')
         # insert table if it doesn't exist
         table_name = search_text[0].replace(" ", "")
-        cursor.execute("CREATE TABLE IF NOT EXISTS " + table_name + " (Date DATE NOT NULL, "
+        table_name_1 = table_name.replace("-", "")
+        cursor.execute("CREATE TABLE IF NOT EXISTS " + table_name_1 + " (Date DATE NOT NULL, "
                                                                     "Season TEXT NOT NULL, "
                                                                     "Team TEXT NOT NULL, "
                                                                     "League TEXT NOT NULL, "
@@ -395,10 +478,10 @@ class InsertIntoDatabase:
             check_date = ''
             if league_bit == 1:
                 check_date = datetime.strptime(date, '%m/%d/%Y').strftime('%Y-%m-%d')
-            if league_bit == 2 or league_bit == 3:
+            if league_bit == 2 or league_bit == 3 or league_bit == 4:
                 check_date = datetime.strptime(date, '%Y-%m-%d').strftime('%Y-%m-%d')
             #   check for repeat date
-            query = "SELECT Date FROM " + table_name + " WHERE Date = %s"
+            query = "SELECT Date FROM " + table_name_1 + " WHERE Date = %s"
             cursor.execute(query, (check_date,))
             numb = cursor.fetchall()
             count = len(numb)
@@ -430,13 +513,13 @@ class InsertIntoDatabase:
                 # sql statement needs to be different due to different DATE formatting for STR_TO_DATE function
                 sql = ''
                 if league_bit == 1:
-                    sql = "INSERT INTO " + table_name + "(Date, Season, Team, League, Opponent, Result, Goals, " \
+                    sql = "INSERT INTO " + table_name_1 + "(Date, Season, Team, League, Opponent, Result, Goals, " \
                                                         "Assists, Total, Penalties, PIM, SOG, PlusMinus, GW, PPG, " \
                                                         "PPA, PPTotal, SHG, SHA, SHTotal)" \
                                                         "VALUES (STR_TO_DATE(%s, '%m/%d/%Y'), %s, %s, %s, %s, %s, " \
                                                         "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-                if league_bit == 2 or league_bit == 3:
-                    sql = "INSERT INTO " + table_name + "(Date, Season, Team, League, Opponent, Result, Goals, " \
+                if league_bit == 2 or league_bit == 3 or league_bit == 4:
+                    sql = "INSERT INTO " + table_name_1 + "(Date, Season, Team, League, Opponent, Result, Goals, " \
                                                         "Assists, Total, Penalties, PIM, SOG, PlusMinus, GW, PPG, " \
                                                         "PPA, PPTotal, SHG, SHA, SHTotal)" \
                                                         "VALUES (STR_TO_DATE(%s, '%Y-%m-%d'), %s, %s, %s, %s, %s, " \
