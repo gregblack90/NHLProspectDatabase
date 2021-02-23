@@ -1,16 +1,9 @@
 import mysql.connector as mysql
-import dbConfig as guiConfig
-
 import re
 from datetime import datetime
 
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import Select, WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.by import By
-
 from game_log_functions import GameLogSearch, EditGameLogExport, InsertIntoDatabase
+import dbConfig as guiConfig
 
 
 # Open Database connection
