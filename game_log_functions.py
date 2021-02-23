@@ -26,6 +26,7 @@ def close_db_connection(conn):
 
 class GameLogSearch:
     @staticmethod
+    # set_league_bit_get_webpage and get_game_log_table functions are called from this function
     def game_log_search(search_text):
         # Start
         start = time.time()
@@ -53,8 +54,9 @@ class GameLogSearch:
         now_format = now.strftime("%m/%d/%Y %H:%M:%S")
         # write to log file
         time_for_search = open(r'C:\NHLdb_pyqt\files\_game_log_search_time.txt', "a")
-        time_for_search.write("" + now_format + " - GameLogData - " + search_text[3] + " - Search time for " + search_text[0] + " took " +
-                              str(search_time) + " seconds\n")
+        time_for_search.write(
+            "" + now_format + " - GameLogData - " + search_text[3] + " - Search time for " + search_text[0] + " took " +
+            str(search_time) + " seconds\n")
         time_for_search.close()
         # quit driver
         driver.quit()
@@ -78,6 +80,9 @@ class GameLogSearch:
             elif search_text[2] == "Univ. of Minnesota":
                 year = search_text[1][-2:]
                 webpage = "https://collegehockeyinc.com/teams/minnesota/roster" + year + ".php"
+            elif search_text[2] == "Univ. of Nebraska-Omaha":
+                year = search_text[1][-2:]
+                webpage = "http://collegehockeyinc.com/teams/omaha/roster" + year + ".php"
         elif search_text[3] == "USHL":
             # set league bit
             league_bit = 2
@@ -137,8 +142,8 @@ class GameLogSearch:
                                                                         search_text[2] + "']"))).click()
             driver.find_element_by_partial_link_text("SUBMIT").click()
             # select player
-            WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.LINK_TEXT,
-                                                                        "" + search_text[0] + ""))).click()
+            WebDriverWait(driver, 20).until(
+                EC.element_to_be_clickable((By.LINK_TEXT, "" + search_text[0] + ""))).click()
             time.sleep(2)
             # find stats table
             table = "ht-table"
@@ -225,10 +230,8 @@ class GameLogSearch:
             # select team
             dropdown_team = Select(driver.find_element_by_xpath("//select[@data-reactid='.0.0.3.2.0.0']"))
             dropdown_team.select_by_visible_text(search_text[2])
-            # wait a second for it to load
-            time.sleep(1)
             # click player name
-            driver.find_element_by_partial_link_text(click_name).click()
+            WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.LINK_TEXT, click_name))).click()
             # once on player page, select game by game button
             driver.find_element_by_xpath("//a[@data-reactid='.0.0.0.2.0.$game_by_game-tab.$game_by_game-link']").click()
             # have to select season again...
@@ -449,26 +452,26 @@ class InsertIntoDatabase:
         table_name = search_text[0].replace(" ", "")
         table_name_1 = table_name.replace("-", "")
         cursor.execute("CREATE TABLE IF NOT EXISTS " + table_name_1 + " (Date DATE NOT NULL, "
-                                                                    "Season TEXT NOT NULL, "
-                                                                    "Team TEXT NOT NULL, "
-                                                                    "League TEXT NOT NULL, "
-                                                                    "Opponent TEXT NOT NULL, "
-                                                                    "Result TEXT NOT NULL, "
-                                                                    "Goals TEXT NOT NULL, "
-                                                                    "Assists TEXT NOT NULL, "
-                                                                    "Total TEXT NOT NULL, "
-                                                                    "Penalties TEXT NOT NULL, "
-                                                                    "PIM TEXT NOT NULL, "
-                                                                    "SOG TEXT NOT NULL, "
-                                                                    "PlusMinus TEXT NOT NULL, "
-                                                                    "GW TEXT NOT NULL, "
-                                                                    "PPG TEXT NOT NULL, "
-                                                                    "PPA TEXT NOT NULL, "
-                                                                    "PPTotal TEXT NOT NULL, "
-                                                                    "SHG TEXT NOT NULL, "
-                                                                    "SHA TEXT NOT NULL, "
-                                                                    "SHTotal TEXT NOT NULL, "
-                                                                    "PRIMARY KEY (Date))")
+                                                                      "Season TEXT NOT NULL, "
+                                                                      "Team TEXT NOT NULL, "
+                                                                      "League TEXT NOT NULL, "
+                                                                      "Opponent TEXT NOT NULL, "
+                                                                      "Result TEXT NOT NULL, "
+                                                                      "Goals TEXT NOT NULL, "
+                                                                      "Assists TEXT NOT NULL, "
+                                                                      "Total TEXT NOT NULL, "
+                                                                      "Penalties TEXT NOT NULL, "
+                                                                      "PIM TEXT NOT NULL, "
+                                                                      "SOG TEXT NOT NULL, "
+                                                                      "PlusMinus TEXT NOT NULL, "
+                                                                      "GW TEXT NOT NULL, "
+                                                                      "PPG TEXT NOT NULL, "
+                                                                      "PPA TEXT NOT NULL, "
+                                                                      "PPTotal TEXT NOT NULL, "
+                                                                      "SHG TEXT NOT NULL, "
+                                                                      "SHA TEXT NOT NULL, "
+                                                                      "SHTotal TEXT NOT NULL, "
+                                                                      "PRIMARY KEY (Date))")
         # 1. check to make sure data (primary key) doesn't exists to avoid redundant data
         # 2. insert data row by row
         list_of_rows = df1.to_numpy().tolist()
@@ -514,20 +517,43 @@ class InsertIntoDatabase:
                 sql = ''
                 if league_bit == 1:
                     sql = "INSERT INTO " + table_name_1 + "(Date, Season, Team, League, Opponent, Result, Goals, " \
-                                                        "Assists, Total, Penalties, PIM, SOG, PlusMinus, GW, PPG, " \
-                                                        "PPA, PPTotal, SHG, SHA, SHTotal)" \
-                                                        "VALUES (STR_TO_DATE(%s, '%m/%d/%Y'), %s, %s, %s, %s, %s, " \
-                                                        "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                                                          "Assists, Total, Penalties, PIM, SOG, PlusMinus, GW, PPG, " \
+                                                          "PPA, PPTotal, SHG, SHA, SHTotal)" \
+                                                          "VALUES (STR_TO_DATE(%s, '%m/%d/%Y'), %s, %s, %s, %s, %s, " \
+                                                          "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
                 if league_bit == 2 or league_bit == 3 or league_bit == 4:
                     sql = "INSERT INTO " + table_name_1 + "(Date, Season, Team, League, Opponent, Result, Goals, " \
-                                                        "Assists, Total, Penalties, PIM, SOG, PlusMinus, GW, PPG, " \
-                                                        "PPA, PPTotal, SHG, SHA, SHTotal)" \
-                                                        "VALUES (STR_TO_DATE(%s, '%Y-%m-%d'), %s, %s, %s, %s, %s, " \
-                                                        "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                                                          "Assists, Total, Penalties, PIM, SOG, PlusMinus, GW, PPG, " \
+                                                          "PPA, PPTotal, SHG, SHA, SHTotal)" \
+                                                          "VALUES (STR_TO_DATE(%s, '%Y-%m-%d'), %s, %s, %s, %s, %s, " \
+                                                          "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
                 val = (
                     date, season, team, league, opp, result, goal, assist, ptotal, pen, pim, plusminus, sog, gw, ppg,
                     ppa, pptot, shg, sha, sht)
                 cursor.execute(sql, val)
                 connection.commit()
+
+        # 3. update UpdateTime table
+        player = table_name_1
+        update_date = datetime.today().strftime('%Y-%m-%d')
+        t = time.localtime()
+        update_time = str(time.strftime("%H:%M:%S", t))
+        # check if player is in table
+        cursor.execute('SELECT Player FROM update_time')
+        res = cursor.fetchall()
+        names = []
+        for item in res:
+            names.append(item[0])
+        # if name is in table, update columns
+        if table_name_1 in names:
+            sql_update = 'UPDATE update_time SET Date = %s, Time = %s WHERE Player = %s'
+            val_update = (update_date, update_time, player)
+            cursor.execute(sql_update, val_update)
+        # if name is not in table, insert row
+        else:
+            sql_insert = 'INSERT INTO update_time (Player, Date, Time) VALUES (%s, %s, %s)'
+            val_insert = (player, update_date, update_time)
+            cursor.execute(sql_insert, val_insert)
+        connection.commit()
         # close database connection
         close_db_connection(connection)

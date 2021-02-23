@@ -302,7 +302,7 @@ class PlayerDataScrape(QObject):
                         search_text_total[count].append(str(beg_of_gm_rg))
                     counter = counter + 1
                 # if there is a repeat year found
-                # and the years DONT match with next item in list,
+                # and the years DON'T match with next item in list,
                 # but matches with the PREVIOUS item in list,
                 # and the league matches the previous item in the list,
                 # it is the end of the matching year, get the amount of games played based on the total from previous matches (count)
