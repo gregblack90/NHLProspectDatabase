@@ -61,8 +61,8 @@ for attempt in range(10):
                 edit_game_log.ushl_game_log(search_data)
             if league_bit == 3:  # QMJHL
                 edit_game_log.qmjhl_game_log(search_data)
-            if league_bit == 4:  # OHL
-                edit_game_log.ohl_game_log(search_data)
+            if league_bit == 4 or league_bit == 5:  # OHL/WHL - game logs are the same
+                edit_game_log.ohl_whl_game_log(search_data)
 
             # 3 - insert data into database function
             insert_game_log = InsertIntoDatabase()
