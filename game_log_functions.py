@@ -264,6 +264,9 @@ class GameLogSearch:
         elif search_text[3] == "OHL":
             league_bit = 4
             webpage = "https://ontariohockeyleague.com/stats/players/68"
+        elif search_text[3] == "WHL":
+            league_bit = 5
+            webpage = "https://whl.ca/stats/players/270"
         # search for team doesnt exist
         else:
             print("Team search not yet available...DO IT TO IT LARS....I mean Greg")
@@ -437,6 +440,55 @@ class GameLogSearch:
                 data_table_df = pd.DataFrame(data)
                 data_table_df.to_excel(r'C:\NHLdb_pyqt\data_frame_tests\game_logs\game_log_' + search_text[0] + '_'
                                        + search_text[1] + '_' + search_text[2] + '_' + search_text[3] + '.xlsx')
+        # WHL
+        if league_bit == 5:
+            # need to split name and rearrange to "Last, First" because of webpage
+            split_name = search_text[0].split(" ")
+            click_name = split_name[1] + ", " + split_name[0]
+            # need to add space on either side of "-" in year...I know...ridiculous
+            year = search_text[1]
+            search_year = year[0:4] + " " + year[4] + " " + year[5:7]
+            # select team
+            dropdown_team = Select(driver.find_element_by_xpath("//select[@data-reactid='.0.0.3.2.0.0']"))
+            dropdown_team.select_by_visible_text(search_text[2])
+            # select season
+            time.sleep(2)
+            dropdown_season = Select(driver.find_element_by_xpath("//select[@data-reactid='.0.0.3.2.0.0']"))
+            dropdown_season.select_by_visible_text(search_year + " Regular Season")
+            # click player name
+            WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.LINK_TEXT, click_name))).click()
+            # once on player page, select game by game button
+            driver.find_element_by_xpath("//a[@data-reactid='.0.0.0.2.0.$game_by_game-tab.$game_by_game-link']").click()
+            # have to select season again...
+            select_again = Select(driver.find_element_by_xpath("//select[@data-reactid='.0.0.0.3.0.1.0.0.0']"))
+            time.sleep(2)
+            select_again.select_by_visible_text(search_year + " Regular Season")
+            # find stats table
+            time.sleep(2)
+            table = "stats-data-table table"
+            data = []
+            soup = BeautifulSoup(driver.page_source, "html.parser")
+            stats_table = soup.find("table", {"id": table})
+            if stats_table is None:
+                # if table not found, try again
+                soup = BeautifulSoup(driver.page_source, "html.parser")
+                stats_table = soup.find("table", {"class": table})
+            if stats_table is not None:
+                # table found, start getting data
+                trs = stats_table.find_all('tr')
+                header_row = row_get_data_text(trs[0], 'th')
+                if header_row:  # if there is a header row include first
+                    data.append(header_row)
+                    trs = trs[1:]
+                for tr in trs:  # for every table row
+                    data.append(row_get_data_text(tr, 'td'))  # data row
+                # make data frame, save to .csv
+                data_table_df = pd.DataFrame(data)
+                data_table_df.to_excel(r'C:\NHLdb_pyqt\data_frame_tests\game_logs\game_log_' + search_text[0] + '_'
+                                       + search_text[1] + '_' + search_text[2] + '_' + search_text[3] + '.xlsx')
+
+
+
 
 
 class EditGameLogExport:
@@ -574,7 +626,7 @@ class EditGameLogExport:
             + search_text[2] + '_' + search_text[3] + '.xlsx')
 
     @staticmethod
-    def ohl_game_log(search_text):
+    def ohl_whl_game_log(search_text):
         # open file
         df1 = pd.read_excel(r'C:\NHLdb_pyqt\data_frame_tests\game_logs\game_log_' + search_text[0] + '_'
                             + search_text[1] + '_' + search_text[2] + '_' + search_text[3] + '.xlsx')
@@ -697,7 +749,7 @@ class InsertIntoDatabase:
                                                           "PPA, PPTotal, SHG, SHA, SHTotal)" \
                                                           "VALUES (STR_TO_DATE(%s, '%m/%d/%Y'), %s, %s, %s, %s, %s, " \
                                                           "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-                if league_bit == 2 or league_bit == 3 or league_bit == 4:
+                if league_bit == 2 or league_bit == 3 or league_bit == 4 or league_bit == 5:
                     sql = "INSERT INTO " + table_name_1 + "(Date, Season, Team, League, Opponent, Result, Goals, " \
                                                           "Assists, Total, Penalties, PIM, SOG, PlusMinus, GW, PPG, " \
                                                           "PPA, PPTotal, SHG, SHA, SHTotal)" \
