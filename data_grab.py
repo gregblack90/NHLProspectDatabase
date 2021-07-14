@@ -1,12 +1,16 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import pyqtSignal, QThread, QObject
+from PyQt5.QtGui import QFont
 from functools import partial
 from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
 from bs4 import BeautifulSoup
 import pandas as pd
+import numpy as np
 import time
 from datetime import datetime
+import re
 import mysql.connector as mysql
 from collections import defaultdict
 import dbConfig as guiConfig
@@ -55,13 +59,41 @@ class UiSetup:
         query = """SELECT Name, Position FROM prospects WHERE Team = %s ORDER BY Position, Name"""
         cursor.execute(query, (index,))
         result = cursor.fetchall()
-        players = []
+        # player = []
+        # get list of players in database - if player is in database, set font to bold
+        cursor.execute("SHOW TABLES")
+        tables = cursor.fetchall()
+        table_list = []
+        search_data = []
+        for (table,) in tables:
+            if table == "prospects" or table == "teams" or table == "update_time":
+                continue
+            table_list.append(table)
+        # for each player in table_list, go to database and find last row to get search information
+        for i in range(len(table_list)):
+            # for search purposes, need to add space between first and last name
+            name = re.sub(r"(?<=\w)([A-Z])", r" \1", table_list[i])
+            # if there is more than two spaces in name (ie Jean Luc Foudy), add hyphen in first space
+            space_counter = len(re.findall(r"[ \n]+", name))
+            if space_counter == 2:
+                name = "-".join(name.split(" ", 1))
+            # assemble search data
+            search_data.append(name)
         # players found, populate list
         if len(result) != 0:
-            for x in result:
-                players.append(x[1] + ": " + x[0])
+            model = self.player_select_combobox.model()
             self.player_select_combobox.clear()
-            self.player_select_combobox.addItems(players)
+            for x in result:
+                player = x[1] + ": " + x[0]
+                item = QtGui.QStandardItem(player)
+                if x[0] in search_data:
+                    font = QFont("MS Shell Dlg 2", 9, QFont.Bold)
+                else:
+                    font = QFont("MS Shell Dlg 2", 10)
+                item.setFont(font)
+                model.appendRow(item)
+                player = []
+            # self.player_select_combobox.addItems(player)
         # if nothing found in database
         if len(result) == 0:
             self.player_select_combobox.clear()
@@ -132,10 +164,13 @@ class SeasonData(QObject):
         driver = webdriver.Chrome(executable_path=r"C:\chromedriver.exe", options=options)
         driver.get(webpage)
         # go to elite prospects page for player
-        link = driver.find_element_by_xpath("//*[contains(text(), ' - Elite Prospects')]")
+        link = driver.find_element_by_xpath("//*[contains(text(), 'hockeydb.com')]")
         link.click()
+        # wait one second and hit "ESC" which will stop loading page
+        time.sleep(1)
+        driver.find_element_by_xpath("//body").send_keys(Keys.ESCAPE)
         # get team, league and GP for each year, return list
-        table = "table table-striped table-condensed table-sortable player-stats skater-stats highlight-stats"
+        table = "sortable autostripe st reg"
         data = []
         soup = BeautifulSoup(driver.page_source, "html.parser")
         stats_table = soup.find("table", {"class": table})
@@ -153,7 +188,7 @@ class SeasonData(QObject):
             for tr in trs:  # for every table row
                 data.append(row_get_data_text(tr, 'td'))  # data row
             # make data frame, save to .csv
-            data_table_df = pd.DataFrame(data[1:], columns=data[0])
+            data_table_df = pd.DataFrame(data[1:])
             data_table_df.to_csv(r'C:\NHLdb_pyqt\data_frame_tests\season_select\season_select_' + prospect + '.csv')
             # find run time to get data
             end = time.time()
@@ -168,17 +203,15 @@ class SeasonData(QObject):
             driver.quit()
             # trim data frame for only needed info
             data_table = pd.read_csv(r'C:\NHLdb_pyqt\data_frame_tests\season_select\season_select_' + prospect + '.csv')
-            data_table = data_table.drop(data_table.columns[[0, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]],
-                                         axis=1)
-            # fill column 0 to have years for all season
-            data_table = data_table.fillna(method='ffill')
-            # check if any "-" are in GP column, if so, replace with 0
-            if data_table['GP'].dtype != 'int64':
-                data_table['GP'] = data_table['GP'].str.replace('-', '0', regex=True)
+            data_table.columns = ['', 'Season', 'Team', 'League', 'GP', '', '', '', '', '', '', '', '', '', '']
+            data_table.drop(0, inplace=True)
+            data_table.drop(data_table.columns[[0, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]], axis=1, inplace=True)
+            if data_table.GP.dtype == np.float64:
+                data_table.GP = data_table.GP.apply(int)
             # save data frame
             data_table.to_csv(r'C:\NHLdb_pyqt\data_frame_tests\season_select\season_select_' + prospect + '.csv')
             # get lists from dataframe
-            season_list = data_table['S'].values.tolist()
+            season_list = data_table['Season'].values.tolist()
             team_list = data_table['Team'].values.tolist()
             league_list = data_table['League'].values.tolist()
             gp_list = data_table['GP'].values.tolist()
@@ -266,11 +299,15 @@ class PlayerDataScrape(QObject):
             search_text.append(prospect[3:])
             search_text.append(year[i])
             # add condition for USNTDP in USHL
-            if team[i] == "USNTDP Juniors":
+            if team[i] == "USNTDP Juniors" or team[i][:19] == "U.S. National Under":
                 search_text.append("Team USA")
             else:
                 search_text.append(team[i])
-            search_text.append(league[i])
+            # add condition for NCAA leagues (for scraping from hockeydb)
+            if league[i] == "Big-10":
+                search_text.append("NCAA")
+            else:
+                search_text.append(league[i])
             # add GP number if there is a repeat season, else add zero
             if search_text[1] in repeat_year and search_text[3] in repeat_league:
                 search_text.append(gp[i])
@@ -340,8 +377,12 @@ class PlayerDataScrape(QObject):
                 edit_game_log.ohl_whl_game_log(search_data)
 
             # call insert data into database function
-            insert_game_log = InsertIntoDatabase()
-            insert_game_log.insert_log(search_data, league_bit)
+            if league_bit != 0:
+                insert_game_log = InsertIntoDatabase()
+                insert_game_log.insert_log(search_data, league_bit)
+            # if league bit is zero, alert league not found, alert user
+            if league_bit == 0:
+                print("League not programmed yet :(")
 
         # Finished
         self.finished.emit()
