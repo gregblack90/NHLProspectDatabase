@@ -118,8 +118,15 @@ class SeasonScrape:
         self.worker.moveToThread(self.thread)
         # Get prospect name before calling thread
         prospect = self.player_select_combobox.currentText()
+        # Get website for search before calling thread
+        if self.elite_radioButton.isChecked():
+            website = "eliteprospects"
+        elif self.hockeydb_radioButton.isChecked():
+            website = "hockeydb"
+        else:
+            website = "hockeydb"
         # Connect signals and slots
-        self.thread.started.connect(partial(self.worker.get_season_data, prospect))
+        self.thread.started.connect(partial(self.worker.get_season_data, prospect, website))
         self.worker.finished.connect(self.thread.quit)
         # self.worker.finished.connect(self.worker.deleteLater)
         self.thread.finished.connect(self.thread.deleteLater)
@@ -148,7 +155,7 @@ class SeasonData(QObject):
     progress_bar_str = pyqtSignal(str)
 
     # Get season data when button is clicked
-    def get_season_data(self, prospect):
+    def get_season_data(self, prospect, website):
         # function used for data frame
         def row_get_data_text(table_row, col_tag='td'):  # td (data) or th (header)
             return [td.get_text(strip=True) for td in table_row.find_all(col_tag)]
@@ -163,9 +170,16 @@ class SeasonData(QObject):
         # options.add_argument('--disable gpu')
         driver = webdriver.Chrome(executable_path=r"C:\chromedriver.exe", options=options)
         driver.get(webpage)
-        # go to elite prospects page for player
-        link = driver.find_element_by_xpath("//*[contains(text(), 'hockeydb.com')]")
-        link.click()
+        # go to season data page for player
+        if website == "eliteprospects":
+            link = driver.find_element_by_xpath("//*[contains(text(), ' - Elite Prospects')]")
+            link.click()
+        elif website == "hockeydb":
+            link = driver.find_element_by_xpath("//*[contains(text(), 'hockeydb.com')]")
+            link.click()
+        else:
+            link = driver.find_element_by_xpath("//*[contains(text(), 'hockeydb.com')]")
+            link.click()
         # wait one second and hit "ESC" which will stop loading page
         time.sleep(1)
         driver.find_element_by_xpath("//body").send_keys(Keys.ESCAPE)
@@ -304,10 +318,10 @@ class PlayerDataScrape(QObject):
             else:
                 search_text.append(team[i])
             # add condition for NCAA leagues (for scraping from hockeydb)
-            if league[i] == "Big-10":
-                search_text.append("NCAA")
-            else:
-                search_text.append(league[i])
+            # if league[i] == "Big-10":
+            #     search_text.append("NCAA")
+            # else:
+            search_text.append(league[i])
             # add GP number if there is a repeat season, else add zero
             if search_text[1] in repeat_year and search_text[3] in repeat_league:
                 search_text.append(gp[i])
