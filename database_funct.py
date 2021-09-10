@@ -42,6 +42,7 @@ class UiDBsetup:
 
 class DBFunctions:
     # function for error message if user tries to edit a table that is not prospects or teams
+    @staticmethod
     def show_error(error_bit):
         def close_error_msg():
             error_msg.close()
@@ -49,17 +50,19 @@ class DBFunctions:
         error_msg = QtWidgets.QMessageBox()
         error_msg.setIcon(QtWidgets.QMessageBox.Warning)
         if error_bit == 1:
-            error_msg.setText("Please select a row")
+            error_msg.setText("Please select a row!")
         elif error_bit == 2:
-            error_msg.setText("Cannot edit tables other than 'prospects' or 'teams'")
+            error_msg.setText("Cannot edit this table!")
         elif error_bit == 3:
-            error_msg.setText("Can only delete entries from prospects table")
+            error_msg.setText("Cannot delete entries from this table!")
         error_msg.setWindowTitle("ERROR")
         error_msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
         error_msg.buttonClicked.connect(close_error_msg)
         return error_msg.exec_()
 
     def load_table(self):
+        # repopulate table list
+        UiDBsetup.pop_table_list(self)
         # Get select table name
         table_name = self.select_table_list.currentText()
         # Call DB connection function, set returned values as connection/cursor
@@ -94,8 +97,33 @@ class DBFunctions:
             header_labels = ["Name", "Team", "Position", "Height", "Weight", "DOB", "Age", "Birthplace",
                              "", "", "", "", "", "", "", "", "", "", "", ""]
             self.view_database_table.setHorizontalHeaderLabels(header_labels)
+        # UPDATE TIMES
+        elif table_name == "update_time":
+            # select all data from update_time table
+            cursor.execute("SELECT * FROM update_time")
+            result = cursor.fetchall()
+            # append results to a list
+            for x in result:
+                data.append(x)
+            # set headers
+            header_labels = ["Player", "Date", "Time", "", "", "", "", "",
+                             "", "", "", "", "", "", "", "", "", "", "", ""]
+            self.view_database_table.setHorizontalHeaderLabels(header_labels)
+        # CURRENT TEAM
+        elif table_name == "current_team":
+            # select all data from update_time table
+            cursor.execute("SELECT * FROM current_team")
+            result = cursor.fetchall()
+            # append results to a list
+            for x in result:
+                data.append(x)
+            # set headers
+            header_labels = ["Player", "Team", "League", "", "", "", "", "",
+                             "", "", "", "", "", "", "", "", "", "", "", ""]
+            self.view_database_table.setHorizontalHeaderLabels(header_labels)
         # PROSPECT STATS
-        elif table_name != "teams" or table_name != "prospects":
+        # elif table_name != "teams" or table_name != "prospects":
+        else:
             # Select all data from teams table
             cursor.execute("SELECT * FROM " + table_name + "")
             result = cursor.fetchall()
@@ -127,7 +155,7 @@ class DBFunctions:
                                                      QtWidgets.QTableWidgetItem(str(data[row_position][col])))
                 if col == 1:
                     self.view_database_table.setItem(row_position, col,
-                                                     QtWidgets.QTableWidgetItem(data[row_position][col]))
+                                                     QtWidgets.QTableWidgetItem(str(data[row_position][col])))
                 if col == 2:
                     self.view_database_table.setItem(row_position, col,
                                                      QtWidgets.QTableWidgetItem(data[row_position][col]))
@@ -206,13 +234,15 @@ class DBFunctions:
         # Get select table name
         table_name = self.select_table_list.currentText()
         # if table is prospects or teams, go ahead and edit
-        if table_name == "prospects" or table_name == "teams":
+        if table_name == "prospects" or table_name == "teams" or table_name == "current_team":
             # get select rows' contents
             data = []
             for index in self.view_database_table.selectionModel().selectedRows():
                 row = index.row()
-                for column in range(8):  # Can only edit teams/prospects tables which have a max of 8 columns
-                    if self.view_database_table.item(row, column) is None:  # This will skip empty columns in team table
+                # Can only edit teams/prospects/current team tables which have a max of 8 columns
+                for column in range(8):
+                    if self.view_database_table.item(row, column) is None:
+                        # This will skip empty columns in team table
                         continue
                     else:
                         data.append(self.view_database_table.item(row, column).text())
@@ -237,8 +267,8 @@ class DBFunctions:
                 age = data[6]
                 bp = data[7]
                 sql = "UPDATE " + table_name + " SET Team=%s ,Position=%s, Height=%s, Weight=%s, DOB=%s, " \
-                                               "Age=%s, Birthplace=%s WHERE Name=%s"
-                val = (team, pos, height, weight, dob, age, bp, name)
+                                               "Birthplace=%s WHERE Name=%s"
+                val = (team, pos, height, weight, dob, bp, name)
                 cursor.execute(sql, val)
                 connection.commit()
                 close_db_connection(connection)
@@ -251,12 +281,23 @@ class DBFunctions:
                 cursor.execute(sql, val)
                 connection.commit()
                 close_db_connection(connection)
+            elif table_name == "current_team":
+                player = data[0]
+                team = data[1]
+                league = data[2]
+                sql = "UPDATE " + table_name + " SET Team=%s, League=%s WHERE Player=%s"
+                val = (team, league, player)
+                cursor.execute(sql, val)
+                connection.commit()
+                close_db_connection(connection)
         # if table is anything other than prospects or teams, don't allow edit
         else:
             bit = 2
             table_error = DBFunctions.show_error(bit)
             if table_error > 0:  # quit function if you get here
                 return
+        # reload table
+        DBFunctions.load_table(self)
 
     def delete_entry(self):
         # get table name
@@ -285,7 +326,6 @@ class DBFunctions:
             cursor = db_conn[1]
             # delete selected row
             delete_key = data[0]
-            print(delete_key)
             sql = "DELETE FROM prospects WHERE Name=%s"
             val = (delete_key,)
             cursor.execute(sql, val)
@@ -297,3 +337,5 @@ class DBFunctions:
             table_error = DBFunctions.show_error(bit)
             if table_error > 0:  # quit function if you get here
                 return
+        # reload table
+        DBFunctions.load_table(self)

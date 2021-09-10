@@ -163,7 +163,7 @@ class SeasonData(QObject):
         # Start
         start = time.time()
         prospect = prospect[3:]
-        webpage = "http://google.com/search?q=" + prospect
+        webpage = "http://google.com/search?q=" + prospect + " hockey"
         options = Options()
         options.page_load_strategy = 'eager'
         # options.add_argument('--headless')
@@ -313,14 +313,11 @@ class PlayerDataScrape(QObject):
             search_text.append(prospect[3:])
             search_text.append(year[i])
             # add condition for USNTDP in USHL
-            if team[i] == "USNTDP Juniors" or team[i][:19] == "U.S. National Under":
+            if team[i] == "USNTDP Juniors" or team[i][:13] == "U.S. National":
                 search_text.append("Team USA")
             else:
                 search_text.append(team[i])
-            # add condition for NCAA leagues (for scraping from hockeydb)
-            # if league[i] == "Big-10":
-            #     search_text.append("NCAA")
-            # else:
+            # add league
             search_text.append(league[i])
             # add GP number if there is a repeat season, else add zero
             if search_text[1] in repeat_year and search_text[3] in repeat_league:

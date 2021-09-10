@@ -409,7 +409,6 @@ class GameLogSearch:
             # have to select season again...
             select_again = Select(driver.find_element_by_xpath("//select[@data-reactid='.0.0.0.3.0.1.0.0.0']"))
             time.sleep(2)
-            select_again.select_by_visible_text("2018 - 19 Regular Season")
             select_again.select_by_visible_text(search_year + " Regular Season")
             # find stats table
             time.sleep(2)

@@ -6,6 +6,7 @@ from gui import Ui_MainWindow
 # import other functions
 from data_grab import UiSetup, SeasonData, SeasonScrape, PlayerSeasonData
 from database_funct import UiDBsetup, DBFunctions
+from add_prospects import UiAPsetup, AddProspectFunctions
 
 
 class Main(QMainWindow, Ui_MainWindow):
@@ -14,7 +15,7 @@ class Main(QMainWindow, Ui_MainWindow):
         # Create UI
         self.setupUi(self)
 
-        # DATA GRAB SECTION
+        # DATA GRAB TAB
         # Populate data grab Combo Boxes
         UiSetup.populate_lists(self)
         # Connect combobox to function that will change player list based on team list selection
@@ -26,7 +27,7 @@ class Main(QMainWindow, Ui_MainWindow):
         # Get player season data
         self.get_season_data_button.clicked.connect(lambda: PlayerSeasonData.get_player_data(self))
 
-        # DATABASE VIEW SECTION
+        # DATABASE VIEW TAB
         # Populate database view combobox
         UiDBsetup.pop_table_list(self)
         # Load table data
@@ -35,6 +36,17 @@ class Main(QMainWindow, Ui_MainWindow):
         self.update_entry_button.clicked.connect(lambda: DBFunctions.update_entry(self))
         # Delete entry (only from prospects table)
         self.delete_entry_button.clicked.connect(lambda: DBFunctions.delete_entry(self))
+
+        # ADD PROSPECTS TAB
+        # Populate combo boxes (Teams, Positions, height (feet, inches), DOB (MM/DD/YYYY)
+        UiAPsetup.pop_combobox_lists(self)
+        # Start process to add manually entered prospect to database
+        self.manual_entry_pushButton.clicked.connect(lambda: AddProspectFunctions.add_prospect(self))
+        # User selects .txt file for prospect upload
+        self.find_file_pushButton.clicked.connect(lambda: AddProspectFunctions.get_file_path(self))
+        # Upload prospects from selected file
+        self.upload_from_file_pushButton.clicked.connect(lambda: AddProspectFunctions.upload_from_file(self))
+
 
     # Add Season data to table once scrape is complete [Called from SeasonScrape, call_scrape_thread]
     @QtCore.pyqtSlot(list)
