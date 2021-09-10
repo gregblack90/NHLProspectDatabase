@@ -35,224 +35,165 @@ class GameLogSearch:
         search_info = GameLogSearch.set_league_bit_get_webpage(search_text)
         league_bit = search_info[0]
         webpage = search_info[1]
+        if league_bit != 0:
+            # common web scrape items
+            options = Options()
+            options.page_load_strategy = 'eager'
+            # options.add_argument('--headless')
+            # options.add_argument('--disable gpu')
+            driver = webdriver.Chrome(executable_path=r"C:\chromedriver.exe", options=options)
+            driver.get(webpage)
 
-        # common web scrape items
-        options = Options()
-        options.page_load_strategy = 'eager'
-        # options.add_argument('--headless')
-        # options.add_argument('--disable gpu')
-        driver = webdriver.Chrome(executable_path=r"C:\chromedriver.exe", options=options)
-        driver.get(webpage)
+            # call function to get game log table
+            GameLogSearch.get_game_log_table(league_bit, search_text, driver)
 
-        # call function to get game log table
-        GameLogSearch.get_game_log_table(league_bit, search_text, driver)
-
-        # find run time to get data
-        end = time.time()
-        search_time = end - start
-        now = datetime.now()
-        now_format = now.strftime("%m/%d/%Y %H:%M:%S")
-        # write to log file
-        time_for_search = open(r'C:\NHLdb_pyqt\files\_game_log_search_time.txt', "a")
-        time_for_search.write(
-            "" + now_format + " - GameLogData - " + search_text[3] + " - Search time for " + search_text[0] + " took " +
-            str(search_time) + " seconds\n")
-        time_for_search.close()
-        # quit driver
-        driver.quit()
+            # find run time to get data
+            end = time.time()
+            search_time = end - start
+            now = datetime.now()
+            now_format = now.strftime("%m/%d/%Y %H:%M:%S")
+            # write to log file
+            time_for_search = open(r'C:\NHLdb_pyqt\files\_game_log_search_time.txt', "a")
+            time_for_search.write(
+                "" + now_format + " - GameLogData - " + search_text[3] + " - Search time for " + search_text[0] +
+                " took " + str(search_time) + " seconds\n")
+            time_for_search.close()
+            # quit driver
+            driver.quit()
         # return league_bit for edit function
         return league_bit
 
     @staticmethod
     def set_league_bit_get_webpage(search_text):
         # different teams will have different google searches
-        league_bit = 0
         webpage = ""
-        if search_text[3] == "NCAA":
+        if search_text[3] == "NCAA" or search_text[3] == "AHA" or search_text[3] == "Big-10" or search_text[3] == "ECAC"\
+                or search_text[3] == "NCHC" or search_text[3] == "WCHA" or search_text[3] == "H-East":
             # set league bit
             league_bit = 1
+            year = search_text[1][-2:]
             if search_text[2] == "Air Force Academy":
-                year = search_text[1][-2:]
                 webpage = "http://collegehockeyinc.com/teams/air-force/roster" + year + ".php"
             elif search_text[2] == "American International College":
-                year = search_text[1][-2:]
                 webpage = "http://collegehockeyinc.com/teams/american-international/roster" + year + ".php"
-            elif search_text[2] == "Arizona State Univ.":
+            elif search_text[2] == "Arizona State Univ." or search_text[2] == "Arizona State University":
                 year = search_text[1][-2:]
                 webpage = "http://collegehockeyinc.com/teams/arizona-state/roster" + year + ".php"
-            elif search_text[2] == "Army (U.S. Military Academy)":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Army (U.S. Military Academy)" or search_text[2] == "Army":
                 webpage = "http://collegehockeyinc.com/teams/army-west-point/roster" + year + ".php"
-            elif search_text[2] == "Bemidji State Univ.":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Bemidji State Univ." or search_text[2] == "Bemidji State University":
                 webpage = "http://collegehockeyinc.com/teams/bemidji-state/roster" + year + ".php"
-            elif search_text[2] == "Bentley Univ.":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Bentley Univ." or search_text[2] == "Bentley University":
                 webpage = "http://collegehockeyinc.com/teams/bentley/roster" + year + ".php"
             elif search_text[2] == "Boston College":
-                year = search_text[1][-2:]
                 webpage = "https://collegehockeyinc.com/teams/boston-college/roster" + year + ".php"
-            elif search_text[2] == "Boston Univ.":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Boston Univ." or search_text[2] == "Boston University":
                 webpage = "http://collegehockeyinc.com/teams/boston-university/roster" + year + ".php"
-            elif search_text[2] == "Bowling Green State Univ.":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Bowling Green State Univ." or search_text[2] == "Bowling Green State University":
                 webpage = "http://collegehockeyinc.com/teams/bowling-green/roster" + year + ".php"
-            elif search_text[2] == "Brown Univ.":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Brown Univ." or search_text[2] == "Brown University":
                 webpage = "http://collegehockeyinc.com/teams/brown/roster" + year + ".php"
             elif search_text[2] == "Canisius College":
-                year = search_text[1][-2:]
                 webpage = "http://collegehockeyinc.com/teams/canisius/roster" + year + ".php"
-            elif search_text[2] == "Clarkson Univ.":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Clarkson Univ." or search_text[2] == "Clarkson University":
                 webpage = "http://collegehockeyinc.com/teams/clarkson/roster" + year + ".php"
-            elif search_text[2] == "Colgate Univ.":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Colgate Univ." or search_text[2] == "Colgate University":
                 webpage = "http://collegehockeyinc.com/teams/colgate/roster" + year + ".php"
-            elif search_text[2] == "College of the Holy Cross":
-                year = search_text[1][-2:]
+            elif search_text[2] == "College of the Holy Cross" or search_text[2] == "Holy Cross College":
                 webpage = "http://collegehockeyinc.com/teams/holy-cross/roster" + year + ".php"
             elif search_text[2] == "Colorado College":
-                year = search_text[1][-2:]
                 webpage = "http://collegehockeyinc.com/teams/colorado-college/roster" + year + ".php"
-            elif search_text[2] == "Cornell Univ.":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Cornell Univ." or search_text[2] == "Cornell University":
                 webpage = "http://collegehockeyinc.com/teams/cornell/roster" + year + ".php"
             elif search_text[2] == "Dartmouth College":
-                year = search_text[1][-2:]
                 webpage = "http://collegehockeyinc.com/teams/dartmouth/roster" + year + ".php"
-            elif search_text[2] == "Ferris State Univ.":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Ferris State Univ." or search_text[2] == "Ferris State University":
                 webpage = "http://collegehockeyinc.com/teams/ferris-state/roster" + year + ".php"
-            elif search_text[2] == "Harvard Univ.":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Harvard Univ." or search_text[2] == "Harvard University":
                 webpage = "http://collegehockeyinc.com/teams/harvard/roster" + year + ".php"
-            elif search_text[2] == "Lake Superior State Univ.":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Lake Superior State Univ." or search_text[2] == "Lake Superior State University":
                 webpage = "http://collegehockeyinc.com/teams/lake-superior-state/roster" + year + ".php"
             elif search_text[2] == "Long Island Univ.":
-                year = search_text[1][-2:]
                 webpage = "http://collegehockeyinc.com/teams/long-island-university/roster" + year + ".php"
-            elif search_text[2] == "Mercyhurst Univ.":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Mercyhurst Univ." or search_text[2] == "Mercyhurst College":
                 webpage = "http://collegehockeyinc.com/teams/mercyhurst/roster" + year + ".php"
             elif search_text[2] == "Merrimack College":
-                year = search_text[1][-2:]
                 webpage = "http://collegehockeyinc.com/teams/merrimack/roster" + year + ".php"
-            elif search_text[2] == "Miami Univ. (Ohio)":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Miami Univ. (Ohio)" or search_text[2] == "Miami University (Ohio)":
                 webpage = "http://collegehockeyinc.com/teams/miami/roster" + year + ".php"
-            elif search_text[2] == "Michigan State Univ.":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Michigan State Univ." or search_text[2] == "Michigan State University":
                 webpage = "http://collegehockeyinc.com/teams/michigan-state/roster" + year + ".php"
             elif search_text[2] == "Michigan Tech":
-                year = search_text[1][-2:]
                 webpage = "http://collegehockeyinc.com/teams/michigan-tech/roster" + year + ".php"
-            elif search_text[2] == "Minnesota State Univ. (Mankato)":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Minnesota State Univ. (Mankato)" or search_text[2] == "Minnesota State U - Mankato":
                 webpage = "http://collegehockeyinc.com/teams/minnesota-state/roster" + year + ".php"
-            elif search_text[2] == "Niagara Univ.":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Niagara Univ." or search_text[2] == "Niagara University":
                 webpage = "http://collegehockeyinc.com/teams/niagara/roster" + year + ".php"
-            elif search_text[2] == "Northeastern Univ.":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Northeastern Univ." or search_text[2] == "Northeastern University":
                 webpage = "http://collegehockeyinc.com/teams/northeastern/roster" + year + ".php"
-            elif search_text[2] == "Northern Michigan Univ.":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Northern Michigan Univ." or search_text[2] == "Northern Michigan University":
                 webpage = "http://collegehockeyinc.com/teams/northern-michigan/roster" + year + ".php"
-            elif search_text[2] == "Ohio State Univ.":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Ohio State Univ." or search_text[2] == "Ohio State University":
                 webpage = "http://collegehockeyinc.com/teams/ohio-state/roster" + year + ".php"
-            elif search_text[2] == "Penn State Univ.":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Penn State Univ." or search_text[2] == "Pennsylvania State U":
                 webpage = "http://collegehockeyinc.com/teams/penn-state/roster" + year + ".php"
-            elif search_text[2] == "Princeton Univ.":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Princeton Univ." or search_text[2] == "Princeton University":
                 webpage = "http://collegehockeyinc.com/teams/princeton/roster" + year + ".php"
             elif search_text[2] == "Providence College":
-                year = search_text[1][-2:]
                 webpage = "http://collegehockeyinc.com/teams/providence/roster" + year + ".php"
-            elif search_text[2] == "Quinnipiac Univ.":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Quinnipiac Univ." or search_text[2] == "Quinnipiac University":
                 webpage = "http://collegehockeyinc.com/teams/quinnipiac/roster" + year + ".php"
-            elif search_text[2] == "RIT (Rochester Inst. of Tech.)":
-                year = search_text[1][-2:]
+            elif search_text[2] == "RIT (Rochester Inst. of Tech.)" or search_text[2] == "R.I.T.":
                 webpage = "http://collegehockeyinc.com/teams/rit/roster" + year + ".php"
-            elif search_text[2] == "Robert Morris Univ.":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Robert Morris Univ." or search_text[2] == "Robert Morris University":
                 webpage = "http://collegehockeyinc.com/teams/robert-morris/roster" + year + ".php"
-            elif search_text[2] == "RPI (Rensselaer Polytech. Inst.)":
-                year = search_text[1][-2:]
+            elif search_text[2] == "RPI (Rensselaer Polytech. Inst.)" or search_text[2] == "R.P.I":
                 webpage = "http://collegehockeyinc.com/teams/rensselaer/roster" + year + ".php"
-            elif search_text[2] == "Sacred Heart Univ.":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Sacred Heart Univ." or search_text[2] == "Sacred Heart University":
                 webpage = "http://collegehockeyinc.com/teams/sacred-heart/roster" + year + ".php"
-            elif search_text[2] == "St. Cloud State Univ.":
-                year = search_text[1][-2:]
+            elif search_text[2] == "St. Cloud State Univ." or search_text[2] == "St. Cloud State":
                 webpage = "http://collegehockeyinc.com/teams/st-cloud-state/roster" + year + ".php"
-            elif search_text[2] == "St. Lawrence Univ.":
-                year = search_text[1][-2:]
+            elif search_text[2] == "St. Lawrence Univ." or search_text[2] == "St. Lawrence University":
                 webpage = "http://collegehockeyinc.com/teams/st-lawrence/roster" + year + ".php"
-            elif search_text[2] == "UMass (Amherst)":
-                year = search_text[1][-2:]
+            elif search_text[2] == "UMass (Amherst)" or search_text[2] == "UMass-Amherst":
                 webpage = "http://collegehockeyinc.com/teams/massachusetts/roster" + year + ".php"
             elif search_text[2] == "UMass-Lowell":
-                year = search_text[1][-2:]
                 webpage = "http://collegehockeyinc.com/teams/umass-lowell/roster" + year + ".php"
             elif search_text[2] == "Union College":
-                year = search_text[1][-2:]
                 webpage = "http://collegehockeyinc.com/teams/union/roster" + year + ".php"
-            elif search_text[2] == "Univ. of Alabama-Huntsville":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Univ. of Alabama-Huntsville" or search_text[2] == "U. of Alabama-Huntsville":
                 webpage = "http://collegehockeyinc.com/teams/alabama-huntsville/roster" + year + ".php"
-            elif search_text[2] == "Univ. of Alaska-Anchorage":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Univ. of Alaska-Anchorage" or search_text[2] == "U. of Alaska-Anchorage":
                 webpage = "http://collegehockeyinc.com/teams/alaska-anchorage/roster" + year + ".php"
-            elif search_text[2] == "Univ. of Alaska-Fairbanks":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Univ. of Alaska-Fairbanks" or search_text[2] == "U. of Alaska-Fairbanks":
                 webpage = "http://collegehockeyinc.com/teams/alaska/roster" + year + ".php"
-            elif search_text[2] == "Univ. of Connecticut":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Univ. of Connecticut" or search_text[2] == "U. of Connecticut":
                 webpage = "http://collegehockeyinc.com/teams/uconn/roster" + year + ".php"
-            elif search_text[2] == "Univ. of Denver":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Univ. of Denver" or search_text[2] == "U. of Denver":
                 webpage = "http://collegehockeyinc.com/teams/denver/roster" + year + ".php"
-            elif search_text[2] == "Univ. of Maine":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Univ. of Maine" or search_text[2] == "U. of Maine":
                 webpage = "http://collegehockeyinc.com/teams/maine/roster" + year + ".php"
-            elif search_text[2] == "Univ. of Michigan":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Univ. of Michigan" or search_text[2] == "U. of Michigan":
                 webpage = "http://collegehockeyinc.com/teams/michigan/roster" + year + ".php"
-            elif search_text[2] == "Univ. of Minnesota":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Univ. of Minnesota" or search_text[2] == "U. of Minnesota":
                 webpage = "https://collegehockeyinc.com/teams/minnesota/roster" + year + ".php"
-            elif search_text[2] == "Univ. of Minnesota-Duluth":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Univ. of Minnesota-Duluth" or search_text[2] == "U. of Minnesota-Duluth":
                 webpage = "http://collegehockeyinc.com/teams/minnesota-duluth/roster" + year + ".php"
-            elif search_text[2] == "Univ. of Nebraska-Omaha":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Univ. of Nebraska-Omaha" or search_text[2] == "U. of Nebraska-Omaha":
                 webpage = "http://collegehockeyinc.com/teams/omaha/roster" + year + ".php"
-            elif search_text[2] == "Univ. of New Hampshire":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Univ. of New Hampshire" or search_text[2] == "U. of New Hampshire":
                 webpage = "http://collegehockeyinc.com/teams/new-hampshire/roster" + year + ".php"
-            elif search_text[2] == "Univ. of North Dakota":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Univ. of North Dakota" or search_text[2] == "U. of North Dakota":
                 webpage = "http://collegehockeyinc.com/teams/north-dakota/roster" + year + ".php"
-            elif search_text[2] == "Univ. of Notre Dame":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Univ. of Notre Dame" or search_text[2] == "Notre Dame":
                 webpage = "https://collegehockeyinc.com/teams/notre-dame/roster" + year + ".php"
-            elif search_text[2] == "Univ. of Vermont":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Univ. of Vermont" or search_text[2] == "U. of Vermont":
                 webpage = "http://collegehockeyinc.com/teams/vermont/roster" + year + ".php"
-            elif search_text[2] == "Univ. of Wisconsin":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Univ. of Wisconsin" or search_text[2] == "U. of Wisconsin":
                 webpage = "http://collegehockeyinc.com/teams/wisconsin/roster" + year + ".php"
-            elif search_text[2] == "Western Michigan Univ.":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Western Michigan Univ." or search_text[2] == "Western Michigan University":
                 webpage = "http://collegehockeyinc.com/teams/western-michigan/roster" + year + ".php"
-            elif search_text[2] == "Yale Univ.":
-                year = search_text[1][-2:]
+            elif search_text[2] == "Yale Univ." or search_text[2] == "Yale University":
                 webpage = "http://collegehockeyinc.com/teams/yale/roster" + year + ".php"
         elif search_text[3] == "USHL":
             # set league bit
@@ -267,10 +208,12 @@ class GameLogSearch:
         elif search_text[3] == "WHL":
             league_bit = 5
             webpage = "https://whl.ca/stats/players/270"
+        # elif search_text[3] == "AHL":
+        #     league_bit = 6
+        #     webpage = "https://theahl.com/stats/player-stats"
         # search for team doesnt exist
         else:
-            print("Team search not yet available...DO IT TO IT LARS....I mean Greg")
-            return
+            league_bit = 0
         return league_bit, webpage
 
     @staticmethod
@@ -279,7 +222,7 @@ class GameLogSearch:
         def row_get_data_text(table_row, col_tag='td'):  # td (data) or th (header)
             return [td.get_text(strip=True) for td in table_row.find_all(col_tag)]
 
-        # go to stats page for player
+        # go to stats page for player and save data frame of game logs
         # NCAA
         if league_bit == 1:
             # navigate to stats table
@@ -311,11 +254,15 @@ class GameLogSearch:
             # select year and team from user selection, click SUBMIT button
             time.sleep(2)
             WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH,
-                                                                        "//select[@class='ng-pristine ng-untouched ng-valid ng-not-empty' and @ng-model='selectedSeason']//option[@label='" +
+                                                                        "//select[@class='ng-pristine ng-untouched "
+                                                                        "ng-valid ng-not-empty' and "
+                                                                        "@ng-model='selectedSeason']//option[@label='" +
                                                                         search_text[1] + "']"))).click()
             time.sleep(2)
             WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH,
-                                                                        "//select[@class='ng-pristine ng-untouched ng-valid ng-not-empty' and @ng-model='selectedTeamNoAll']//option[@label='" +
+                                                                        "//select[@class='ng-pristine ng-untouched "
+                                                                        "ng-valid ng-not-empty' and @ng-model="
+                                                                        "'selectedTeamNoAll']//option[@label='" +
                                                                         search_text[2] + "']"))).click()
             driver.find_element_by_partial_link_text("SUBMIT").click()
             # select player
@@ -359,12 +306,12 @@ class GameLogSearch:
             # need to split name and rearrange to "Last, First" because of webpage
             split_name = search_text[0].split(" ")
             click_name = split_name[1] + ", " + split_name[0]
-            # select season
-            dropdown_season = Select(driver.find_element_by_xpath("//select[@data-reactid='.0.0.3.0.0.0']"))
-            dropdown_season.select_by_visible_text(search_text[1] + " | Regular Season")
             # select team
             dropdown_team = Select(driver.find_element_by_xpath("//select[@data-reactid='.0.0.3.2.0.0']"))
             dropdown_team.select_by_visible_text(select_team)
+            # select season
+            dropdown_season = Select(driver.find_element_by_xpath("//select[@data-reactid='.0.0.3.2.0.0']"))
+            dropdown_season.select_by_visible_text(search_text[1] + " | Regular Season")
             # wait a second for it to load
             time.sleep(1)
             # click player name
@@ -462,6 +409,7 @@ class GameLogSearch:
             # have to select season again...
             select_again = Select(driver.find_element_by_xpath("//select[@data-reactid='.0.0.0.3.0.1.0.0.0']"))
             time.sleep(2)
+            select_again.select_by_visible_text("2018 - 19 Regular Season")
             select_again.select_by_visible_text(search_year + " Regular Season")
             # find stats table
             time.sleep(2)
@@ -486,9 +434,6 @@ class GameLogSearch:
                 data_table_df = pd.DataFrame(data)
                 data_table_df.to_excel(r'C:\NHLdb_pyqt\data_frame_tests\game_logs\game_log_' + search_text[0] + '_'
                                        + search_text[1] + '_' + search_text[2] + '_' + search_text[3] + '.xlsx')
-
-
-
 
 
 class EditGameLogExport:
@@ -709,7 +654,7 @@ class InsertIntoDatabase:
             check_date = ''
             if league_bit == 1:
                 check_date = datetime.strptime(date, '%m/%d/%Y').strftime('%Y-%m-%d')
-            if league_bit == 2 or league_bit == 3 or league_bit == 4:
+            if league_bit == 2 or league_bit == 3 or league_bit == 4 or league_bit == 5:
                 check_date = datetime.strptime(date, '%Y-%m-%d').strftime('%Y-%m-%d')
             #   check for repeat date
             query = "SELECT Date FROM " + table_name_1 + " WHERE Date = %s"
