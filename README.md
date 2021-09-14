@@ -1,5 +1,5 @@
 # ProspectDatabase
---> PyQt GUI Framework
+--> NHL Prospect Database Management Application
 
 1.) Game Log Search 
 
