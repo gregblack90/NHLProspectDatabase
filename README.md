@@ -1,5 +1,5 @@
 # ProspectDatabase
---> NHL Prospect Database Management Application
+## NHL Prospect Database Management Application
 
 1.) Game Log Search 
 
