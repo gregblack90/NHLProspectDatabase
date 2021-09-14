@@ -35,12 +35,13 @@ class GameLogSearch:
         search_info = GameLogSearch.set_league_bit_get_webpage(search_text)
         league_bit = search_info[0]
         webpage = search_info[1]
+        # only run if league webpage has been programmed in set_league_bit_get_webpage function
         if league_bit != 0:
             # common web scrape items
             options = Options()
             options.page_load_strategy = 'eager'
-            # options.add_argument('--headless')
-            # options.add_argument('--disable gpu')
+            options.add_argument('--headless')
+            options.add_argument('--disable gpu')
             driver = webdriver.Chrome(executable_path=r"C:\chromedriver.exe", options=options)
             driver.get(webpage)
 
@@ -222,7 +223,7 @@ class GameLogSearch:
         def row_get_data_text(table_row, col_tag='td'):  # td (data) or th (header)
             return [td.get_text(strip=True) for td in table_row.find_all(col_tag)]
 
-        # go to stats page for player and save data frame of game logs
+        # navigate to stats page for player (league dependent) and save data frame of game logs
         # NCAA
         if league_bit == 1:
             # navigate to stats table
@@ -252,7 +253,7 @@ class GameLogSearch:
         # USHL
         if league_bit == 2:
             # select year and team from user selection, click SUBMIT button
-            time.sleep(2)
+            # time.sleep(2)
             WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH,
                                                                         "//select[@class='ng-pristine ng-untouched "
                                                                         "ng-valid ng-not-empty' and "
