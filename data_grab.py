@@ -130,8 +130,6 @@ class SeasonScrape:
         # Start the thread
         self.thread.start()
         # Format progress bar
-        self.progressBar.setValue(99.9)
-        self.progressBar.setFormat("Loading Player Data...Please Wait.")
         self.worker.percent_changed.connect(self.progressBar.setValue)
         self.worker.progress_bar_str.connect(self.progressBar.setFormat)
         # Add Data to GUI
@@ -290,8 +288,6 @@ class PlayerSeasonData:
         # Start the thread
         self.thread.start()
         # Format progress bar
-        self.progressBar.setValue(99.9)
-        self.progressBar.setFormat("Loading Game Log Data...Please Wait.")
         self.worker.percent_changed.connect(self.progressBar.setValue)
         self.worker.progress_bar_str.connect(self.progressBar.setFormat)
         self.get_season_data_button.setEnabled(False)

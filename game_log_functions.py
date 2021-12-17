@@ -228,15 +228,50 @@ class GameLogSearch:
         if league_bit == 1:
             # navigate to stats table
             driver.find_element_by_partial_link_text(search_text[0]).click()
-            # find stats table
-            table = "base"
             data = []
-            soup = BeautifulSoup(driver.page_source, "html.parser")
-            stats_table = soup.find("table", {"class": table})
-            if stats_table is None:
-                # if table not found, try again
+            # collegehockeyinc changed their html for statistics after the 2020-2021 season.
+            # old way still works for years prior, so a check was added for seasons 2021-2022 and on
+            year = search_text[1]
+            last_year = int(year[-2:])
+            if last_year <= 21:
+                table = "base"
                 soup = BeautifulSoup(driver.page_source, "html.parser")
                 stats_table = soup.find("table", {"class": table})
+                while stats_table is None:
+                    # if table not found, try again
+                    soup = BeautifulSoup(driver.page_source, "html.parser")
+                    stats_table = soup.find("table", {"class": table})
+            else:
+                # for new collegehockeyinc html
+                soup2 = BeautifulSoup(driver.page_source, "html.parser")
+                tables = soup2.findAll("table")
+                table_num = 0
+                for table in tables:
+                    table_num = table_num + 1
+                print("number of tables on webpage: " + str(table_num))
+                # check for number of tables (if first year in NCAA, no links will be available to click)
+                if table_num > 3:
+                    # click link to show style needed to find table
+                    click_year = year[-2:]
+                    driver.find_element_by_partial_link_text(click_year).click()
+                    style = "display: block;"
+                    # find table
+                    soup = BeautifulSoup(driver.page_source, "html.parser")
+                    stats_table = soup.find("div", {"style": style})
+                    while stats_table is None:
+                        # if table not found, try again
+                        soup = BeautifulSoup(driver.page_source, "html.parser")
+                        stats_table = soup.find("div", {"style": style})
+                else:
+                    # no links available, go straight to finding table
+                    h_class = "gxgdata factbox"
+                    soup = BeautifulSoup(driver.page_source, "html.parser")
+                    stats_table = soup.find("table", {"class": h_class})
+                    while stats_table is None:
+                        # if table not found, try again
+                        soup = BeautifulSoup(driver.page_source, "html.parser")
+                        stats_table = soup.find("div", {"class": h_class})
+
             if stats_table is not None:
                 # table found, start getting data
                 trs = stats_table.find_all('tr')
@@ -246,9 +281,9 @@ class GameLogSearch:
                     trs = trs[1:]
                 for tr in trs:  # for every table row
                     data.append(row_get_data_text(tr, 'td'))  # data row
-                # make data frame, save to .csv
-                data_table_df = pd.DataFrame(data)
-                data_table_df.to_excel(r'C:\NHLdb_pyqt\data_frame_tests\game_logs\game_log_' + search_text[0] + '_'
+            # make data frame, save to .csv
+            data_table_df = pd.DataFrame(data)
+            data_table_df.to_excel(r'C:\NHLdb_pyqt\data_frame_tests\game_logs\game_log_' + search_text[0] + '_'
                                        + search_text[1] + '_' + search_text[2] + '_' + search_text[3] + '.xlsx')
         # USHL
         if league_bit == 2:
@@ -329,7 +364,7 @@ class GameLogSearch:
             data = []
             soup = BeautifulSoup(driver.page_source, "html.parser")
             stats_table = soup.find("table", {"id": table})
-            if stats_table is None:
+            while stats_table is None:
                 # if table not found, try again
                 soup = BeautifulSoup(driver.page_source, "html.parser")
                 stats_table = soup.find("table", {"class": table})
@@ -449,47 +484,127 @@ class EditGameLogExport:
     @staticmethod
     def colhockeyinc_game_logs(search_text):
         # open file
+        # collegehockeyinc changed their html for statistics after the 2020-2021 season.
+        # old way still works for years prior, so a check was added for seasons 2021-2022 and on
+        year = search_text[1]
+        last_year = int(year[-2:])
         df1 = pd.read_excel(
             r'C:\NHLdb_pyqt\data_frame_tests\game_logs\game_log_' + search_text[0] + '_' + search_text[1] + '_'
             + search_text[2] + '_' + search_text[3] + '.xlsx')
-        # rename columns
-        df1.columns = ['', 'Date', 'Opponent', 'Result', 'Points', 'GW', 'PP Points', 'SH Points', 'G Streak',
-                       'A Streak', 'Point Streak', 'P/Min', 'SOG', '+/-', 'Season GP', 'Reverse GP']
-        # check for "--- DID NOT DRESS ---" in 'Points' column, if it's there replace string
-        if df1['Points'].str.contains('---- DID NOT DRESS ----').any():
-            df1['Points'] = df1['Points'].replace({'---- DID NOT DRESS ----': 'DNP-DNP-DNP'})
-        # check for "E" in '+/-" column, if it's there replace string
-        if df1['+/-'].str.contains('E').any():
-            df1['+/-'] = df1['+/-'].replace({'E': '0'})
-        # split PP points, SH points column, ES points, +/- column
-        df1[['PP G', 'PP A', 'PP Total']] = df1['PP Points'].str.split('-', expand=True)
-        df1[['SH G', 'SH A', 'SH Total']] = df1['SH Points'].str.split('-', expand=True)
-        df1[['G', 'A', 'Total']] = df1['Points'].str.split('-', expand=True)
-        df1[['P', 'Min']] = df1['P/Min'].str.split('/', expand=True)
-        # drop a bunch of columns
-        df1.drop('PP Points', axis=1, inplace=True)
-        df1.drop('SH Points', axis=1, inplace=True)
-        df1.drop('Points', axis=1, inplace=True)
-        df1.drop('P/Min', axis=1, inplace=True)
-        df1.drop('Point Streak', axis=1, inplace=True)
-        df1.drop('Season GP', axis=1, inplace=True)
-        df1.drop('Reverse GP', axis=1, inplace=True)
-        # drop first row, last row
-        df1.drop(0, inplace=True)
-        df1.drop(df1.tail(1).index, inplace=True)
-        # re-order columns
-        df1 = df1[['Date', 'Opponent', 'Result', 'G', 'A', 'Total', 'P', 'Min', 'SOG', '+/-', 'GW', 'PP G', 'PP A',
-                   'PP Total', 'SH G', 'SH A', 'SH Total']]
-        # convert data types
-        cols = ['G', 'A', 'Total', 'P', 'Min', 'SOG', '+/-', 'PP G', 'PP A', 'PP Total', 'SH G', 'SH A', 'SH Total']
-        df1[cols] = df1[cols].apply(pd.to_numeric, errors='coerce', axis=1)
-        # refill DNP and Exhibitions
-        if df1['G'].isnull().values.any():
-            df1[['G', 'A', 'Total']] = df1[['G', 'A', 'Total']].fillna('DNP')
-        if df1['SOG'].isnull().values.any():
-            df1[['SOG']] = df1[['SOG']].fillna('Exhibition')
-        # fill N/As with zeros
-        df1.fillna(0, inplace=True)
+        # for college hockey seasons 2020-2021 and earlier
+        if last_year <= 21:
+            # rename columns
+            df1.columns = ['', 'Date', 'Opponent', 'Result', 'Points', 'GW', 'PP Points', 'SH Points', 'G Streak',
+                           'A Streak', 'Point Streak', 'P/Min', 'SOG', '+/-', 'Season GP', 'Reverse GP']
+            # check for "--- DID NOT DRESS ---" in 'Points' column, if it's there replace string
+            if df1['Points'].str.contains('---- DID NOT DRESS ----').any():
+                df1['Points'] = df1['Points'].replace({'---- DID NOT DRESS ----': 'DNP-DNP-DNP'})
+            # check for "E" in '+/-" column, if it's there replace string
+            if df1['+/-'].str.contains('E').any():
+                df1['+/-'] = df1['+/-'].replace({'E': '0'})
+            # split PP points, SH points column, ES points, +/- column
+            df1[['PP G', 'PP A', 'PP Total']] = df1['PP Points'].str.split('-', expand=True)
+            df1[['SH G', 'SH A', 'SH Total']] = df1['SH Points'].str.split('-', expand=True)
+            df1[['G', 'A', 'Total']] = df1['Points'].str.split('-', expand=True)
+            df1[['P', 'Min']] = df1['P/Min'].str.split('/', expand=True)
+            # drop a bunch of columns
+            df1.drop('PP Points', axis=1, inplace=True)
+            df1.drop('SH Points', axis=1, inplace=True)
+            df1.drop('Points', axis=1, inplace=True)
+            df1.drop('P/Min', axis=1, inplace=True)
+            df1.drop('Point Streak', axis=1, inplace=True)
+            df1.drop('Season GP', axis=1, inplace=True)
+            df1.drop('Reverse GP', axis=1, inplace=True)
+            # drop first row, last row
+            df1.drop(0, inplace=True)
+            df1.drop(df1.tail(1).index, inplace=True)
+            # re-order columns
+            df1 = df1[['Date', 'Opponent', 'Result', 'G', 'A', 'Total', 'P', 'Min', 'SOG', '+/-', 'GW', 'PP G', 'PP A',
+                       'PP Total', 'SH G', 'SH A', 'SH Total']]
+            # convert data types
+            cols = ['G', 'A', 'Total', 'P', 'Min', 'SOG', '+/-', 'PP G', 'PP A', 'PP Total', 'SH G', 'SH A', 'SH Total']
+            df1[cols] = df1[cols].apply(pd.to_numeric, errors='coerce', axis=1)
+            # refill DNP and Exhibitions
+            if df1['G'].isnull().values.any():
+                df1[['G', 'A', 'Total']] = df1[['G', 'A', 'Total']].fillna('DNP')
+            if df1['SOG'].isnull().values.any():
+                df1[['SOG']] = df1[['SOG']].fillna('Exhibition')
+            # fill N/As with zeros
+            df1.fillna(0, inplace=True)
+        else:
+            print("updated college hockey data edit")
+            # for college hockey seasons 2021-2022 and later
+            # drop two weird columns
+            columns = ['Unnamed: 0']
+            df1.drop(columns, inplace=True, axis=1)
+            # change column names
+            df1.columns = ['Date', 'Opponent', 'G', 'A', 'Total', 'Min']
+            # drop first row
+            df1.drop(0, inplace=True)
+            # drop "Totals" row
+            df1 = df1[~df1.Date.str.contains("TOTALS")]
+            # "Date" column format needs to be changed
+            # Example:
+            #    date_0 = Oct. 8 (string)
+            #    date_1 = 1900-10-08 00:00:00 (datetime)
+            #    date_2 = 1900-10-08 00:00:00 (string)
+            #    date_3 = 2021-10-08 00:00:00 (string)
+            #    date_4 = 2021-10-08 00:00:00 (datetime)
+            # search for "Date" column
+            for column in df1:
+                if column == "Date":
+                    # get "Date" column values
+                    date_series_obj = df1[column]
+                    date_series = date_series_obj.values
+                    # Loop through cell values for "Date" column
+                    for date_0 in date_series:
+                        # convert from string to datetime format (number months)
+                        date_1 = datetime.strptime(date_0, '%b. %d')
+                        # convert datetime back to string for manipulation
+                        date_2 = str(date_1)
+                        # if the month is between August and December, the new year has not occurred yet for current season
+                        # if the month is between January and June, the new year has occurred for the current season
+                        new_date = ''
+                        if 8 <= int(date_2[5:7]) <= 12:
+                            # new year hasn't occurred, use first four char. from "season" value of "search_text" list
+                            search_text_year = search_text[1]
+                            new_year = search_text_year[:4]
+                        if 0 < int(date_2[5:7]) <= 6:
+                            # new year has occurred, use last two char. from "season" value of "search_text" list.
+                            # need to append "20" to front of new value to be able to change formats later
+                            search_text_year = search_text[1]
+                            new_year = "20" + str(search_text_year[-2:])
+                        # replace 1900 with correct year
+                        date_3 = date_2.replace("1900", new_year)
+                        # convert string back to correct datetime format used in
+                        # InsertIntoDatabase.insert_log(search_text, league_bit) for league_bit == 1(NCAA)
+                        date_4 = datetime.fromisoformat(date_3)
+                        date_final = date_4.strftime('%m/%d/%Y')
+                        # print(date_final + " (" + date_0 + ", " + str(date_1) + ", " + str(date_2) + ", " + str(date_3) + ")")
+                        # get current cell location
+                        d = dict(zip(df1.columns, range(len(df1.columns))))
+                        s = df1.rename(columns=d).stack()
+                        cell_loc = (s == date_0).idxmax()
+                        # replace current cell with date in correct format
+                        df1.loc[cell_loc[0]].at['Date'] = date_final
+                else:
+                    continue
+            # add a bunch of columns
+            df1['Result'] = 'x'
+            df1['P'] = 'x'
+            df1['PP A'] = 'x'
+            df1['PP Total'] = 'x'
+            df1['SH A'] = 'x'
+            df1['SH Total'] = 'x'
+            df1['GW'] = 'x'
+            df1['PP G'] = 'x'
+            df1['PP A'] = 'x'
+            df1['SH G'] = 'x'
+            df1['SOG'] = 'x'
+            df1['+/-'] = 'x'
+            df1 = df1[['Date', 'Opponent', 'Result', 'G', 'A', 'Total', 'P', 'Min', 'SOG', '+/-', 'GW', 'PP G', 'PP A',
+                       'PP Total', 'SH G', 'SH A', 'SH Total']]
+
         # save data file
         df1.to_excel(
             r'C:\NHLdb_pyqt\data_frame_tests\game_logs\game_log_' + search_text[0] + '_' + search_text[1] + '_'
