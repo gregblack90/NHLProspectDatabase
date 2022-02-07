@@ -62,7 +62,14 @@ class Main(QMainWindow, Ui_MainWindow):
                 if col == 0:
                     self.tableWidget.setItem(row_position, col, QtWidgets.QTableWidgetItem(str(year[row])))
                 if col == 1:
-                    self.tableWidget.setItem(row_position, col, QtWidgets.QTableWidgetItem(str(team[row])))
+                    add_team = str(team[row])
+                    # need to update formatting to match QMJHL site
+                    if str(team[row]) == "Quebec Remparts":
+                        add_team = "Québec Remparts"
+                    if "*" in str(team[row]):
+                        add_team = team[row]
+                        add_team = add_team.replace('*', '')
+                    self.tableWidget.setItem(row_position, col, QtWidgets.QTableWidgetItem(add_team))
                 if col == 2:
                     self.tableWidget.setItem(row_position, col, QtWidgets.QTableWidgetItem(str(league[row])))
                 if col == 3:
