@@ -183,22 +183,23 @@ class SeasonData(QObject):
         self.progress_bar_str.emit("Starting Search...")
         start = time.time()
         prospect = prospect[3:]
-        webpage = "http://google.com/search?q=" + prospect + " hockey"
+        webpage = "http://google.com/search?q=" + prospect + " hockeydb"
         options = Options()
         options.page_load_strategy = 'eager'
         options.add_argument('--headless')
         options.add_argument('--disable gpu')
         driver = webdriver.Chrome(options=options)
         driver.get(webpage)
+        # time.sleep(1)
         # find and click website link for player
         if website == "eliteprospects":
             link = driver.find_element_by_xpath("//*[contains(text(), ' - Elite Prospects')]")
             link.click()
         elif website == "hockeydb":
-            link = driver.find_element_by_xpath("//*[contains(text(), 'hockeydb.com')]")
+            link = driver.find_element_by_xpath("//*[contains(text(), 'Hockey Stats and Profile at hockeydb.com')]")
             link.click()
         else:
-            link = driver.find_element_by_xpath("//*[contains(text(), 'hockeydb.com')]")
+            link = driver.find_element_by_xpath("//*[contains(text(), 'Hockey Stats and Profile at hockeydb.com')]")
             link.click()
         self.percent_changed.emit(30)
         self.progress_bar_str.emit("Webpage found!  Loading...")

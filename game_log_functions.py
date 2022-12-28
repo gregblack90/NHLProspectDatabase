@@ -434,7 +434,7 @@ class GameLogSearch:
             # need to add space on either side of "-" in year...I know...ridiculous
             year = search_text[1]
             search_year = year[0:4] + " " + year[4] + " " + year[5:7]
-           # team name shizz
+            # team name shizz
             team_name = search_text[2]
             # if Winnipeg Ice, capitalize ICE
             if team_name == 'Winnipeg Ice':
@@ -443,10 +443,10 @@ class GameLogSearch:
                 flag = 0
                 # loop through letters, once a space is found, set flag and start looking for lowercase letters.  If lowercase letter is found, capitalize it
                 for letter in team_name_raw:
-                    if letter.isspace() == True:
+                    if letter.isspace():
                         flag = 1
                         team_name += letter
-                    elif letter.islower() == True and flag == 1:
+                    elif letter.islower() and flag == 1:
                         team_name += letter.upper()
                     else:
                         team_name += letter
@@ -458,6 +458,7 @@ class GameLogSearch:
             dropdown_season = Select(driver.find_element_by_xpath("//select[@data-reactid='.0.0.3.2.0.0']"))
             dropdown_season.select_by_visible_text(search_year + " Regular Season")
             # click player name
+            time.sleep(2)
             WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.LINK_TEXT, click_name))).click()
             # once on player page, select game by game button
             driver.find_element_by_xpath("//a[@data-reactid='.0.0.0.2.0.$game_by_game-tab.$game_by_game-link']").click()
@@ -778,9 +779,10 @@ class InsertIntoDatabase:
                                                                       "SHG TEXT NOT NULL, "
                                                                       "SHA TEXT NOT NULL, "
                                                                       "SHTotal TEXT NOT NULL, "
+                                                                      "DataTimestamp TIMESTAMP NOT NULL,"
                                                                       "PRIMARY KEY (Date))")
-        # 1. check to make sure data (primary key) doesn't exists to avoid redundant data
-        # 2. insert data row by row
+        # check to make sure data (check date of each game - primary key) doesn't exist to avoid redundant data
+        # insert data row by row
         list_of_rows = df1.to_numpy().tolist()
         for row in range(len(list_of_rows)):
             # get date
@@ -819,28 +821,30 @@ class InsertIntoDatabase:
                 shg = list_of_rows[row][15]
                 sha = list_of_rows[row][16]
                 sht = list_of_rows[row][17]
+                # get current time of data update
+                timestamp_of_data_add = datetime.now()
                 # insert row into database
                 # sql statement needs to be different due to different DATE formatting for STR_TO_DATE function
                 sql = ''
                 if league_bit == 1:
                     sql = "INSERT INTO " + table_name_1 + "(Date, Season, Team, League, Opponent, Result, Goals, " \
                                                           "Assists, Total, Penalties, PIM, SOG, PlusMinus, GW, PPG, " \
-                                                          "PPA, PPTotal, SHG, SHA, SHTotal)" \
+                                                          "PPA, PPTotal, SHG, SHA, SHTotal, DataTimestamp)" \
                                                           "VALUES (STR_TO_DATE(%s, '%m/%d/%Y'), %s, %s, %s, %s, %s, " \
-                                                          "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                                                          "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
                 if league_bit == 2 or league_bit == 3 or league_bit == 4 or league_bit == 5:
                     sql = "INSERT INTO " + table_name_1 + "(Date, Season, Team, League, Opponent, Result, Goals, " \
                                                           "Assists, Total, Penalties, PIM, SOG, PlusMinus, GW, PPG, " \
-                                                          "PPA, PPTotal, SHG, SHA, SHTotal)" \
+                                                          "PPA, PPTotal, SHG, SHA, SHTotal, DataTimestamp)" \
                                                           "VALUES (STR_TO_DATE(%s, '%Y-%m-%d'), %s, %s, %s, %s, %s, " \
-                                                          "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                                                          "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
                 val = (
                     date, season, team, league, opp, result, goal, assist, ptotal, pen, pim, plusminus, sog, gw, ppg,
-                    ppa, pptot, shg, sha, sht)
+                    ppa, pptot, shg, sha, sht, timestamp_of_data_add)
                 cursor.execute(sql, val)
                 connection.commit()
 
-        # 3. update UpdateTime table
+        # update UpdateTime table
         player = table_name_1
         update_date = datetime.today().strftime('%Y-%m-%d')
         t = time.localtime()
