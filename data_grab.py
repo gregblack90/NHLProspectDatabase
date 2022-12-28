@@ -13,6 +13,9 @@ from datetime import datetime
 import re
 import mysql.connector as mysql
 from collections import defaultdict
+import chromedriver_autoinstaller
+import os
+import shutil
 import dbConfig as guiConfig
 from game_log_functions import GameLogSearch, EditGameLogExport, InsertIntoDatabase
 
@@ -33,16 +36,17 @@ def close_db_connection(conn):
 class UiSetup:
     def populate_lists(self):
         # Team List
-        db_conn = db_connection()
-        connection = db_conn[0]
-        cursor = db_conn[1]
-        cursor.execute("SELECT * FROM teams")
-        result = cursor.fetchall()
-        teams = []
-        for x in result:
-            teams.append(x[0])
+        # db_conn = db_connection()
+        # connection = db_conn[0]
+        # cursor = db_conn[1]
+        # cursor.execute("SELECT * FROM teams")
+        # result = cursor.fetchall()
+        # teams = []
+        # for x in result:
+        #     teams.append(x[0])
+        teams = ['Please Select a Team', 'Buffalo Sabres', 'Colorado Avalanche']
         # close connection
-        close_db_connection(connection)
+        # close_db_connection(connection)
 
         # Initial Player List
         player_list_init = "Please Select a Team"
@@ -103,6 +107,24 @@ class UiSetup:
     # Clear Table contents
     def clear_table(self):
         self.tableWidget.setRowCount(0)
+
+    # Run Chromedriver BIT
+    def chromedriver_BIT(self):
+        # call chromedriver auto-installer
+        ver = chromedriver_autoinstaller.install()
+        # function returns filepath to current chromedriver, get create time of that file
+        create_time_sec = int(os.path.getctime(ver))
+        # get current time
+        curr_time_sec = int(time.time())
+        # if create time of file is within a second of current time, file was just created.
+        if create_time_sec == curr_time_sec or (create_time_sec + 1) == curr_time_sec:
+            # Copy to working directory
+            shutil.copy(ver, r"C:\NHLdb_pyqt")
+            self.label_3.setText('BIT complete - New extension created!')
+        # if create time of file is not within a second of current time, no file was just created
+        else:
+            # do nothing - no file created
+            self.label_3.setText('BIT complete - chromedriver is current!')
 
 
 # 2a - Setup/call thread to get season data
@@ -166,7 +188,7 @@ class SeasonData(QObject):
         options.page_load_strategy = 'eager'
         options.add_argument('--headless')
         options.add_argument('--disable gpu')
-        driver = webdriver.Chrome(executable_path=r"C:\chromedriver.exe", options=options)
+        driver = webdriver.Chrome(options=options)
         driver.get(webpage)
         # find and click website link for player
         if website == "eliteprospects":

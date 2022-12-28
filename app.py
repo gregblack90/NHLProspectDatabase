@@ -14,7 +14,8 @@ class Main(QMainWindow, Ui_MainWindow):
         super(Main, self).__init__(parent)
         # Create UI
         self.setupUi(self)
-
+        # Button to run Chromedriver BIT to check browser compatibility
+        self.chromedriver_BIT_pushButton.clicked.connect(lambda: UiSetup.chromedriver_BIT(self))
         # DATA GRAB TAB
         # Populate data grab Combo Boxes
         UiSetup.populate_lists(self)
@@ -66,6 +67,7 @@ class Main(QMainWindow, Ui_MainWindow):
                     # need to update formatting to match QMJHL site
                     if str(team[row]) == "Quebec Remparts":
                         add_team = "Québec Remparts"
+                    # replaces '*' in team name if player has been traded mid-season (specific to hockeydb)
                     if "*" in str(team[row]):
                         add_team = team[row]
                         add_team = add_team.replace('*', '')

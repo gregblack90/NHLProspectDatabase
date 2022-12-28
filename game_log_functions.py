@@ -40,9 +40,9 @@ class GameLogSearch:
             # common web scrape items
             options = Options()
             options.page_load_strategy = 'eager'
-            options.add_argument('--headless')
-            options.add_argument('--disable gpu')
-            driver = webdriver.Chrome(executable_path=r"C:\chromedriver.exe", options=options)
+            # options.add_argument('--headless')
+            # options.add_argument('--disable gpu')
+            driver = webdriver.Chrome(options=options)
             driver.get(webpage)
 
             # call function to get game log table
@@ -68,7 +68,7 @@ class GameLogSearch:
     def set_league_bit_get_webpage(search_text):
         # different teams will have different google searches
         webpage = ""
-        if search_text[3] == "NCAA" or search_text[3] == "AHA" or search_text[3] == "Big-10" or search_text[3] == "ECAC"\
+        if search_text[3] == "NCAA" or search_text[3] == "AHA" or search_text[3] == "Big-10" or search_text[3] == "ECAC" \
                 or search_text[3] == "NCHC" or search_text[3] == "WCHA" or search_text[3] == "H-East":
             # set league bit
             league_bit = 1
@@ -199,7 +199,7 @@ class GameLogSearch:
         elif search_text[3] == "USHL":
             # set league bit
             league_bit = 2
-            webpage = "https://www.ushl.com/view#/roster/11/73"
+            webpage = "https://ushl.com/ht/#/player-stats"
         elif search_text[3] == "QMJHL":
             league_bit = 3
             webpage = "https://theqmjhl.ca/stats/players/196"
@@ -284,21 +284,19 @@ class GameLogSearch:
             # make data frame, save to .csv
             data_table_df = pd.DataFrame(data)
             data_table_df.to_excel(r'C:\NHLdb_pyqt\data_frame_tests\game_logs\game_log_' + search_text[0] + '_'
-                                       + search_text[1] + '_' + search_text[2] + '_' + search_text[3] + '.xlsx')
+                                   + search_text[1] + '_' + search_text[2] + '_' + search_text[3] + '.xlsx')
         # USHL
         if league_bit == 2:
             # select year and team from user selection, click SUBMIT button
             # time.sleep(2)
             WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH,
-                                                                        "//select[@class='ng-pristine ng-untouched "
-                                                                        "ng-valid ng-not-empty' and "
+                                                                        "//select[@class='ng-pristine ng-untouched ng-valid ng-not-empty' and "
                                                                         "@ng-model='selectedSeason']//option[@label='" +
                                                                         search_text[1] + "']"))).click()
             time.sleep(2)
             WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH,
-                                                                        "//select[@class='ng-pristine ng-untouched "
-                                                                        "ng-valid ng-not-empty' and @ng-model="
-                                                                        "'selectedTeamNoAll']//option[@label='" +
+                                                                        "//select[@class='ng-pristine ng-untouched ng-valid ng-not-empty' and @ng-model="
+                                                                        "'selectedTeam']//option[@label='" +
                                                                         search_text[2] + "']"))).click()
             driver.find_element_by_partial_link_text("SUBMIT").click()
             # select player
@@ -389,6 +387,7 @@ class GameLogSearch:
             # select season
             dropdown_season = Select(driver.find_element_by_xpath("//select[@data-reactid='.0.0.3.0.0.0']"))
             dropdown_season.select_by_visible_text(search_text[1] + " Regular Season")
+            time.sleep(2)
             # select team
             dropdown_team = Select(driver.find_element_by_xpath("//select[@data-reactid='.0.0.3.2.0.0']"))
             dropdown_team.select_by_visible_text(search_text[2])
@@ -400,6 +399,9 @@ class GameLogSearch:
             select_again = Select(driver.find_element_by_xpath("//select[@data-reactid='.0.0.0.3.0.1.0.0.0']"))
             time.sleep(2)
             select_again.select_by_visible_text(search_text[1] + " Regular Season")
+            driver.refresh()
+            # have to select season again...
+            select_again = Select(driver.find_element_by_xpath("//select[@data-reactid='.0.0.0.3.0.1.0.0.0']"))
             # find stats table
             time.sleep(2)
             table = "stats-data-table table"
@@ -428,12 +430,29 @@ class GameLogSearch:
             # need to split name and rearrange to "Last, First" because of webpage
             split_name = search_text[0].split(" ")
             click_name = split_name[1] + ", " + split_name[0]
+            print(click_name)
             # need to add space on either side of "-" in year...I know...ridiculous
             year = search_text[1]
             search_year = year[0:4] + " " + year[4] + " " + year[5:7]
+           # team name shizz
+            team_name = search_text[2]
+            # if Winnipeg Ice, capitalize ICE
+            if team_name == 'Winnipeg Ice':
+                team_name_raw = search_text[2]
+                team_name = ''
+                flag = 0
+                # loop through letters, once a space is found, set flag and start looking for lowercase letters.  If lowercase letter is found, capitalize it
+                for letter in team_name_raw:
+                    if letter.isspace() == True:
+                        flag = 1
+                        team_name += letter
+                    elif letter.islower() == True and flag == 1:
+                        team_name += letter.upper()
+                    else:
+                        team_name += letter
             # select team
             dropdown_team = Select(driver.find_element_by_xpath("//select[@data-reactid='.0.0.3.2.0.0']"))
-            dropdown_team.select_by_visible_text(search_text[2])
+            dropdown_team.select_by_visible_text(team_name)
             # select season
             time.sleep(2)
             dropdown_season = Select(driver.find_element_by_xpath("//select[@data-reactid='.0.0.3.2.0.0']"))
